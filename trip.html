@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Trip Planner</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="福岡旅遊">
+  <meta name="theme-color" content="#0f1117">
+  <link rel="manifest" href="manifest.json">
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnEReNWAsG1X73hzSjSdnYjFfl_SxsACk&language=zh-TW"></script>
   <style>
     :root {
@@ -1198,6 +1203,14 @@
     });
 
     render();
+  </script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>
