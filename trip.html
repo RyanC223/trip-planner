@@ -193,6 +193,42 @@
       gap: 10px;
     }
 
+    .card.reorder .card-head {
+      grid-template-columns: auto auto 1fr auto;
+    }
+
+    .reorder-controls {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      padding-right: 2px;
+    }
+
+    .card.reorder .reorder-controls {
+      display: flex;
+    }
+
+    .move-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 10px;
+      border: 1px solid #424c6c;
+      background: #242b3f;
+      color: #dce2f6;
+      display: grid;
+      place-items: center;
+      font-size: 0.76rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .move-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
     .time {
       font-size: 0.92rem;
       color: #d0d6ea;
@@ -223,6 +259,21 @@
 
     .complete-btn,
     .expand-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid #424c6c;
+      background: #242b3f;
+      color: #dce2f6;
+      display: grid;
+      place-items: center;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: 0.16s ease;
+      user-select: none;
+    }
+
+    .edit-btn {
       width: 28px;
       height: 28px;
       border-radius: 999px;
@@ -533,6 +584,118 @@
       font-size: 0.88rem;
       text-align: right;
     }
+
+    .add-spot-btn {
+      width: 100%;
+      margin-top: 12px;
+      border: 1px dashed #3b445f;
+      background: rgba(255, 255, 255, 0.02);
+      color: #d8deef;
+      border-radius: 14px;
+      padding: 12px 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 999;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 430px;
+      background: #121726;
+      border: 1px solid #2b3144;
+      border-radius: 18px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.5);
+      padding: 14px 14px 12px;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .modal-title {
+      font-size: 0.98rem;
+      font-weight: 760;
+      margin: 0;
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid #424c6c;
+      background: #242b3f;
+      color: #dce2f6;
+      cursor: pointer;
+    }
+
+    .modal-form {
+      display: grid;
+      gap: 10px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      color: #aab2cc;
+      margin-bottom: 6px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      font-size: 0.9rem;
+      color: #f2f5ff;
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid #3f4865;
+      background: #171d2c;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: linear-gradient(160deg, #7f8eff, #6572dd);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      color: #ffd2d2;
+    }
   </style>
 </head>
 <body>
@@ -555,6 +718,59 @@
 
     <button class="fab" id="reorderBtn">✎ 調整順序</button>
   </main>
+
+  <div class="modal-overlay" id="spotModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="spotModalTitle">
+      <div class="modal-head">
+        <p class="modal-title" id="spotModalTitle">編輯景點</p>
+        <button class="modal-close" type="button" id="spotModalClose" aria-label="Close">✕</button>
+      </div>
+      <form class="modal-form" id="spotForm">
+        <div class="field">
+          <label for="f_time">時間（time）</label>
+          <input id="f_time" name="time" type="text" placeholder="如 15:45" />
+        </div>
+        <div class="field">
+          <label for="f_name">地點名稱（name）</label>
+          <input id="f_name" name="name" type="text" placeholder="如 大濠公園" />
+        </div>
+        <div class="field">
+          <label for="f_subtitle">副標題（subtitle）</label>
+          <input id="f_subtitle" name="subtitle" type="text" placeholder="如 親子散步 / 特色描述" />
+        </div>
+        <div class="field">
+          <label for="f_category">類型（category）</label>
+          <select id="f_category" name="category">
+            <option value="餐飲">餐飲</option>
+            <option value="購物">購物</option>
+            <option value="觀光">觀光</option>
+            <option value="交通">交通</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f_cost">費用（cost）</label>
+          <input id="f_cost" name="cost" type="text" placeholder="如 ¥800/人 或 免費" />
+        </div>
+        <div class="field">
+          <label for="f_duration">停留時間（duration）</label>
+          <select id="f_duration" name="duration">
+            <option value="15分">15分</option>
+            <option value="30分">30分</option>
+            <option value="45分">45分</option>
+            <option value="1小時">1小時</option>
+            <option value="1.5小時">1.5小時</option>
+            <option value="2小時">2小時</option>
+            <option value="3小時以上">3小時以上</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-primary" type="submit" id="spotSaveBtn">儲存</button>
+          <button class="btn btn-danger" type="button" id="spotDeleteBtn">刪除此景點</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script>
     const STORAGE_KEY = "tripPlanner_fukuoka_v1";
@@ -642,6 +858,8 @@
 
     let state = loadState();
     let draggingId = null;
+    let reorderDirty = false;
+    let modalCtx = { day: 1, itemId: null };
 
     let gmap = null;
     let gMarkers = [];
@@ -702,6 +920,63 @@
 
     function dayTransports(day) {
       return state.transportByDay[day] || [];
+    }
+
+    function swapArrayItems(arr, a, b) {
+      const tmp = arr[a];
+      arr[a] = arr[b];
+      arr[b] = tmp;
+    }
+
+    function moveSpot(day, index, dir) {
+      const items = dayItems(day);
+      const transports = dayTransports(day);
+      const next = index + dir;
+      if (next < 0 || next >= items.length) return;
+
+      swapArrayItems(items, index, next);
+
+      const a = Math.min(index, next);
+      // keep transport segments roughly in sync with item order
+      if (transports[a] && transports[a + 1]) {
+        swapArrayItems(transports, a, a + 1);
+      }
+
+      reorderDirty = true;
+      render();
+    }
+
+    function uid() {
+      return `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+    }
+
+    function openSpotModal(day, itemId) {
+      modalCtx = { day, itemId };
+      const overlay = document.getElementById("spotModal");
+      const title = document.getElementById("spotModalTitle");
+      const delBtn = document.getElementById("spotDeleteBtn");
+
+      const item = itemId ? dayItems(day).find((i) => i.id === itemId) : null;
+      title.textContent = item ? "編輯景點" : "新增景點";
+      delBtn.style.display = item ? "block" : "none";
+
+      document.getElementById("f_time").value = item?.time || "";
+      document.getElementById("f_name").value = item?.title || "";
+      document.getElementById("f_subtitle").value = item?.subtitle || "";
+      document.getElementById("f_category").value = item?.type || "觀光";
+      document.getElementById("f_cost").value = item?.cost || "";
+      document.getElementById("f_duration").value = item?.stay || "45分";
+
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden", "false");
+      document.getElementById("f_time").focus();
+    }
+
+    function closeSpotModal() {
+      const overlay = document.getElementById("spotModal");
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden", "true");
+      modalCtx = { day: state.activeDay, itemId: null };
     }
 
     function typeClass(type) {
@@ -896,15 +1171,22 @@
 
     function createCardNode(item, day) {
       const card = document.createElement("article");
-      card.className = `card${item.done ? " done" : ""}`;
-      card.draggable = state.reorderMode;
+      card.className = `card${item.done ? " done" : ""}${state.reorderMode ? " reorder" : ""}`;
       card.dataset.id = item.id;
 
       const expandClass = item.expanded ? "expanded" : "";
       const detailOpen = item.expanded ? "open" : "";
       const doneClass = item.done ? "done" : "";
+      const idx = dayItems(day).findIndex((i) => i.id === item.id);
+      const canUp = state.reorderMode && idx > 0;
+      const canDown = state.reorderMode && idx >= 0 && idx < dayItems(day).length - 1;
+
       card.innerHTML = `
         <div class="card-head">
+          <div class="reorder-controls">
+            <button class="move-btn" type="button" data-move="up" ${canUp ? "" : "disabled"}>▲</button>
+            <button class="move-btn" type="button" data-move="down" ${canDown ? "" : "disabled"}>▼</button>
+          </div>
           <div class="time">${item.time}</div>
           <div>
             <h3 class="place-title">${item.title}</h3>
@@ -912,6 +1194,7 @@
           </div>
           <div class="head-actions">
             <button class="complete-btn ${doneClass}" title="完成">✓</button>
+            <button class="edit-btn" title="編輯" type="button">✎</button>
             <button class="expand-btn ${expandClass}" title="展開">⌄</button>
           </div>
         </div>
@@ -930,10 +1213,13 @@
       `;
 
       const completeBtn = card.querySelector(".complete-btn");
+      const editBtn = card.querySelector(".edit-btn");
       const expandBtn = card.querySelector(".expand-btn");
       const stayEl = card.querySelector('[data-edit="stay"]');
       const costEl = card.querySelector('[data-edit="cost"]');
       const noteEl = card.querySelector('[data-note="1"]');
+      const upBtn = card.querySelector('[data-move="up"]');
+      const downBtn = card.querySelector('[data-move="down"]');
 
       completeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -953,37 +1239,30 @@
         render();
       });
 
+      editBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openSpotModal(day, item.id);
+      });
+
       makeEditable(stayEl, day, item.id, "stay");
       makeEditable(costEl, day, item.id, "cost");
       makeNoteEditable(day, item.id, noteEl);
 
-      if (state.reorderMode) {
-        card.addEventListener("dragstart", () => {
-          draggingId = item.id;
-          card.classList.add("dragging");
+      if (upBtn) {
+        upBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const at = dayItems(day).findIndex((i) => i.id === item.id);
+          if (at <= 0) return;
+          moveSpot(day, at, -1);
         });
+      }
 
-        card.addEventListener("dragend", () => {
-          draggingId = null;
-          card.classList.remove("dragging");
-        });
-
-        card.addEventListener("dragover", (e) => {
-          e.preventDefault();
-        });
-
-        card.addEventListener("drop", (e) => {
-          e.preventDefault();
-          if (!draggingId || draggingId === item.id) return;
-          const list = dayItems(day);
-          const from = list.findIndex((i) => i.id === draggingId);
-          const to = list.findIndex((i) => i.id === item.id);
-          if (from < 0 || to < 0) return;
-          const [moved] = list.splice(from, 1);
-          list.splice(to, 0, moved);
-          // 交通段範例為示意資料，排序後先保留原有段落數量與內容。
-          saveState();
-          render();
+      if (downBtn) {
+        downBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const at = dayItems(day).findIndex((i) => i.id === item.id);
+          if (at < 0 || at >= dayItems(day).length - 1) return;
+          moveSpot(day, at, +1);
         });
       }
 
@@ -1015,6 +1294,13 @@
           content.appendChild(createTransportNode(transports[idx], idx));
         }
       });
+
+      const addBtn = document.createElement("button");
+      addBtn.className = "add-spot-btn";
+      addBtn.type = "button";
+      addBtn.textContent = "＋ 新增景點";
+      addBtn.addEventListener("click", () => openSpotModal(day, null));
+      content.appendChild(addBtn);
 
       const totalPerPerson = items.reduce((sum, i) => sum + parseYen(i.cost), 0);
       const totalEl = document.createElement("div");
@@ -1197,8 +1483,87 @@
     });
 
     document.getElementById("reorderBtn").addEventListener("click", () => {
-      state.reorderMode = !state.reorderMode;
+      const next = !state.reorderMode;
+      if (state.reorderMode && !next) {
+        if (reorderDirty) saveState();
+        reorderDirty = false;
+      }
+      state.reorderMode = next;
+      render();
+    });
+
+    // Modal wiring
+    document.getElementById("spotModal").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) closeSpotModal();
+    });
+    document.getElementById("spotModalClose").addEventListener("click", closeSpotModal);
+
+    document.getElementById("spotForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const day = modalCtx.day;
+      const list = dayItems(day);
+
+      const payload = {
+        time: document.getElementById("f_time").value.trim(),
+        title: document.getElementById("f_name").value.trim(),
+        subtitle: document.getElementById("f_subtitle").value.trim(),
+        type: document.getElementById("f_category").value,
+        cost: document.getElementById("f_cost").value.trim(),
+        stay: document.getElementById("f_duration").value
+      };
+
+      if (!payload.title) payload.title = "未命名景點";
+      if (!payload.time) payload.time = "--:--";
+      if (!payload.subtitle) payload.subtitle = "";
+      if (!payload.cost) payload.cost = "未設定";
+
+      if (modalCtx.itemId) {
+        const item = list.find((i) => i.id === modalCtx.itemId);
+        if (item) {
+          item.time = payload.time;
+          item.title = payload.title;
+          item.subtitle = payload.subtitle;
+          item.type = payload.type;
+          item.cost = payload.cost;
+          item.stay = payload.stay;
+        }
+      } else {
+        list.push({
+          id: uid(),
+          type: payload.type,
+          time: payload.time,
+          title: payload.title,
+          subtitle: payload.subtitle,
+          stay: payload.stay,
+          cost: payload.cost,
+          done: false,
+          expanded: false,
+          note: ""
+        });
+      }
+
       saveState();
+      closeSpotModal();
+      render();
+    });
+
+    document.getElementById("spotDeleteBtn").addEventListener("click", () => {
+      const day = modalCtx.day;
+      if (!modalCtx.itemId) return;
+      const list = dayItems(day);
+      const idx = list.findIndex((i) => i.id === modalCtx.itemId);
+      if (idx < 0) return;
+      list.splice(idx, 1);
+
+      // keep transport segments length roughly aligned
+      const transports = dayTransports(day);
+      if (transports.length > 0) {
+        const tIdx = Math.min(idx, transports.length - 1);
+        transports.splice(tIdx, 1);
+      }
+
+      saveState();
+      closeSpotModal();
       render();
     });
 
