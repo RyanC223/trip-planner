@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Trip Planner</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnEReNWAsG1X73hzSjSdnYjFfl_SxsACk&language=zh-TW"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --text: #f3f4f8;
+      --muted: #a3a8b8;
+      --line: #2a2f3f;
+      --accent: #7c8cff;
+      --done: 0.55;
+      --eat: #39d98a;
+      --shop: #4ea8ff;
+      --sight: #ffab5c;
+      --transit: #ff7bbb;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 500px at 50% -15%, #1f2433 0%, var(--bg) 45%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC",
+        "Noto Sans TC", "Segoe UI", Roboto, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 18px 10px 28px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 430px;
+      background: linear-gradient(180deg, #111522, #0f1117);
+      border: 1px solid #262c3d;
+      border-radius: 28px;
+      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .header {
+      padding: 18px 18px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: linear-gradient(180deg, rgba(15, 17, 23, 0.95), rgba(15, 17, 23, 0.82));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .trip-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin: 0;
+    }
+
+    .trip-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .day-tabs-wrap {
+      margin-top: 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .day-tabs-wrap::-webkit-scrollbar {
+      display: none;
+    }
+
+    .day-tabs {
+      display: inline-flex;
+      gap: 8px;
+      padding-bottom: 2px;
+    }
+
+    .day-tab {
+      background: #202637;
+      color: #ced3e6;
+      border: 1px solid #2f3650;
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+
+    .day-tab.active {
+      background: #3b4362;
+      color: #fff;
+      border-color: #5e6a98;
+      box-shadow: 0 6px 16px rgba(110, 128, 255, 0.25);
+    }
+
+    .subtabs {
+      margin-top: 12px;
+      background: #171b29;
+      border: 1px solid #2a3045;
+      border-radius: 999px;
+      padding: 4px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+
+    .subtab-btn {
+      border: 0;
+      color: #c5cbe0;
+      background: transparent;
+      border-radius: 999px;
+      padding: 9px 8px;
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+
+    .subtab-btn.active {
+      background: #2b334b;
+      color: #fff;
+      box-shadow: inset 0 0 0 1px #414d72;
+    }
+
+    .content {
+      padding: 12px 14px 90px;
+    }
+
+    .day-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 30px 8px;
+      border: 1px dashed #31384d;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .itinerary-item {
+      margin: 10px 0;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid #2b3144;
+      border-radius: 16px;
+      padding: 12px;
+      transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      cursor: grab;
+    }
+
+    .card:active {
+      cursor: grabbing;
+    }
+
+    .card.done {
+      opacity: var(--done);
+      border-left: 3px solid #4ade80;
+    }
+
+    .card.done .time {
+      text-decoration: line-through;
+    }
+
+    .card.dragging {
+      opacity: 0.4;
+      transform: scale(0.98);
+      border-color: #56608b;
+    }
+
+    .card-head {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .time {
+      font-size: 0.92rem;
+      color: #d0d6ea;
+      letter-spacing: 0.01em;
+      font-variant-numeric: tabular-nums;
+      min-width: 48px;
+    }
+
+    .place-title {
+      margin: 0;
+      font-weight: 760;
+      font-size: 1.02rem;
+      line-height: 1.28;
+    }
+
+    .subtitle {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.2;
+    }
+
+    .head-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .complete-btn,
+    .expand-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid #424c6c;
+      background: #242b3f;
+      color: #dce2f6;
+      display: grid;
+      place-items: center;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: 0.16s ease;
+      user-select: none;
+    }
+
+    .complete-btn.done {
+      background: #22c55e;
+      border-color: #4ade80;
+      color: #062b14;
+    }
+
+    .expand-btn.expanded {
+      transform: rotate(180deg);
+    }
+
+    .tag-row {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .type-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 54px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 650;
+      color: #fff;
+    }
+
+    .type-eat {
+      background: rgba(57, 217, 138, 0.22);
+      border: 1px solid rgba(57, 217, 138, 0.55);
+      color: #7bf2b7;
+    }
+
+    .type-shop {
+      background: rgba(78, 168, 255, 0.22);
+      border: 1px solid rgba(78, 168, 255, 0.55);
+      color: #96ccff;
+    }
+
+    .type-sight {
+      background: rgba(255, 171, 92, 0.2);
+      border: 1px solid rgba(255, 171, 92, 0.55);
+      color: #ffc78f;
+    }
+
+    .type-transit {
+      background: rgba(255, 123, 187, 0.2);
+      border: 1px solid rgba(255, 123, 187, 0.6);
+      color: #ffb4d7;
+    }
+
+    .editable {
+      font-size: 0.79rem;
+      color: #d8deef;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px dashed #3b445f;
+      background: rgba(255, 255, 255, 0.02);
+      cursor: pointer;
+      transition: 0.15s ease;
+      user-select: none;
+    }
+
+    .editable:hover {
+      border-color: #5d6a95;
+      color: #fff;
+    }
+
+    .inline-input,
+    .inline-select {
+      font-size: 0.79rem;
+      color: #f2f5ff;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid #5d6a95;
+      background: #20273a;
+      outline: none;
+      min-width: 120px;
+      max-width: 180px;
+    }
+
+    .detail {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.24s ease, opacity 0.24s ease, margin-top 0.24s ease;
+      margin-top: 0;
+    }
+
+    .detail.open {
+      max-height: 180px;
+      opacity: 1;
+      margin-top: 10px;
+    }
+
+    .detail-inner {
+      border-top: 1px solid #31384c;
+      padding-top: 9px;
+      color: #b3b9cd;
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+
+    .note-display {
+      margin-top: 8px;
+      border: 1px dashed #3a425c;
+      border-radius: 10px;
+      padding: 7px 8px;
+      color: #c1c8dd;
+      cursor: pointer;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 34px;
+    }
+
+    .note-display.placeholder {
+      color: #8f97b0;
+    }
+
+    .note-editor {
+      width: 100%;
+      margin-top: 8px;
+      min-height: 84px;
+      resize: vertical;
+      border-radius: 10px;
+      border: 1px solid #4b5679;
+      background: #171d2c;
+      color: #e8edff;
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      outline: none;
+    }
+
+    .transport {
+      margin: 8px 6px;
+      border-left: 1px dashed #3f4865;
+      padding-left: 10px;
+      color: #bac1d9;
+      font-size: 0.8rem;
+    }
+
+    .transport-main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      border-radius: 9px;
+      padding: 6px 7px;
+      transition: 0.15s ease;
+    }
+
+    .transport-main:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .transport-left {
+      display: block;
+      flex: 1;
+      min-width: 0;
+      overflow-x: auto;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .transport-line {
+      display: inline-block;
+    }
+
+    .route-chip {
+      border: 1px solid #4a5270;
+      border-radius: 999px;
+      font-size: 0.71rem;
+      color: #d6dcf3;
+      padding: 2px 8px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .alt-routes {
+      margin-top: 6px;
+      padding: 2px 8px 2px;
+      border-top: 1px dashed #31384b;
+      display: none;
+    }
+
+    .alt-routes.open {
+      display: block;
+    }
+
+    .alt-route-item {
+      margin-top: 0;
+      color: #d4daf0;
+      font-size: 0.76rem;
+      padding: 8px 0;
+      cursor: pointer;
+    }
+
+    .alt-route-item + .alt-route-item {
+      border-top: 1px solid #2f3650;
+    }
+
+    .alt-route-line {
+      display: block;
+      white-space: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .map-placeholder {
+      border: 1px dashed #37405a;
+      background: #161b2a;
+      color: #9ea7c2;
+      border-radius: 16px;
+      text-align: center;
+      padding: 38px 12px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    .map-shell {
+      height: calc(100vh - 160px);
+      min-height: 360px;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid #2b3144;
+      background: #0f1322;
+      position: relative;
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.25);
+    }
+
+    #gmap {
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-type-toggle {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      display: inline-flex;
+      gap: 6px;
+      z-index: 5;
+    }
+
+    .map-type-btn {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-size: 0.78rem;
+      background: rgba(17, 21, 34, 0.75);
+      color: #e6ebff;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+    }
+
+    .map-type-btn.active {
+      background: #ffffff;
+      color: #0b0f19;
+      border-color: rgba(255, 255, 255, 0.78);
+    }
+
+    .fab {
+      position: absolute;
+      right: 16px;
+      bottom: 18px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(160deg, #7f8eff, #6572dd);
+      color: #fff;
+      padding: 12px 16px;
+      font-size: 0.86rem;
+      font-weight: 680;
+      letter-spacing: 0.01em;
+      box-shadow: 0 12px 26px rgba(87, 102, 222, 0.35);
+      cursor: pointer;
+    }
+
+    @media (min-width: 440px) {
+      body {
+        padding-top: 28px;
+      }
+    }
+
+    .day-total {
+      margin: 12px 4px 0;
+      padding-top: 12px;
+      border-top: 1px solid #343d58;
+      color: #d7def4;
+      font-size: 0.88rem;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <h1 class="trip-title" id="tripTitle"></h1>
+      <div class="trip-meta" id="tripMeta"></div>
+
+      <div class="day-tabs-wrap">
+        <div class="day-tabs" id="dayTabs"></div>
+      </div>
+
+      <div class="subtabs">
+        <button class="subtab-btn active" data-view="itinerary">行程</button>
+        <button class="subtab-btn" data-view="map">地圖</button>
+      </div>
+    </header>
+
+    <section class="content" id="content"></section>
+
+    <button class="fab" id="reorderBtn">✎ 調整順序</button>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "tripPlanner_fukuoka_v1";
+    const DATA_VERSION = 3;
+
+    const defaultData = {
+      dataVersion: DATA_VERSION,
+      tripName: "福岡家庭旅遊",
+      days: 6,
+      people: 4,
+      activeDay: 1,
+      activeView: "itinerary",
+      reorderMode: false,
+      itineraryByDay: {
+        1: [
+          {
+            id: "a1",
+            type: "觀光",
+            time: "09:30",
+            title: "大濠公園散步",
+            subtitle: "湖畔步道 / 親子散步",
+            stay: "約 60 分鐘",
+            cost: "免費",
+            done: false,
+            expanded: false,
+            note: "可先在公園拍照，推車友善。"
+          },
+          {
+            id: "a2",
+            type: "餐飲",
+            time: "11:15",
+            title: "一蘭拉麵 本社總本店",
+            subtitle: "福岡經典豚骨拉麵",
+            stay: "約 45 分鐘",
+            cost: "¥1,200/人",
+            done: false,
+            expanded: false,
+            note: "可依口味客製濃淡與辣度。"
+          },
+          {
+            id: "a3",
+            type: "購物",
+            time: "14:00",
+            title: "天神地下街",
+            subtitle: "伴手禮與藥妝採買",
+            stay: "約 90 分鐘",
+            cost: "自由購物",
+            done: false,
+            expanded: false,
+            note: "建議先逛北區，再往南區移動。"
+          }
+        ],
+        2: [],
+        3: [],
+        4: [],
+        5: [],
+        6: []
+      },
+      transportByDay: {
+        1: [
+          {
+            id: "t1",
+            main: { icon: "🚶", mode: "步行", duration: "15分鐘", cost: "免費" },
+            alternatives: [
+              { icon: "🚕", mode: "計程車", duration: "10分鐘", cost: "¥800" },
+              { icon: "🚌", mode: "巴士", duration: "20分鐘", cost: "¥150/人" }
+            ]
+          },
+          {
+            id: "t2",
+            main: { icon: "🚇", mode: "地鐵", duration: "18分鐘", cost: "¥260/人" },
+            alternatives: [
+              { icon: "🚶", mode: "步行", duration: "25分鐘", cost: "免費" },
+              { icon: "🚕", mode: "計程車", duration: "8分鐘", cost: "¥600" }
+            ]
+          }
+        ],
+        2: [],
+        3: [],
+        4: [],
+        5: [],
+        6: []
+      }
+    };
+
+    let state = loadState();
+    let draggingId = null;
+
+    let gmap = null;
+    let gMarkers = [];
+    let gInfoWindow = null;
+
+    function migrateTransportSegment(seg) {
+      if (seg.main && typeof seg.main === "object") {
+        return {
+          id: seg.id,
+          main: { ...seg.main },
+          alternatives: Array.isArray(seg.alternatives) ? seg.alternatives : []
+        };
+      }
+      return {
+        id: seg.id,
+        main: {
+          icon: seg.icon ?? "",
+          mode: seg.mode ?? "",
+          duration: seg.duration ?? "",
+          cost: seg.cost ?? ""
+        },
+        alternatives: Array.isArray(seg.alternatives) ? seg.alternatives : []
+      };
+    }
+
+    function migrateStateIfNeeded(state) {
+      console.log("目前 dataVersion:", state.dataVersion);
+      if (!state.dataVersion || state.dataVersion < DATA_VERSION) {
+        state.transportByDay = structuredClone(defaultData.transportByDay);
+        state.dataVersion = DATA_VERSION;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+      return state;
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+        return structuredClone(defaultData);
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        return migrateStateIfNeeded(parsed);
+      } catch (err) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
+        return structuredClone(defaultData);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function dayItems(day) {
+      return state.itineraryByDay[day] || [];
+    }
+
+    function dayTransports(day) {
+      return state.transportByDay[day] || [];
+    }
+
+    function typeClass(type) {
+      if (type === "餐飲") return "type-eat";
+      if (type === "購物") return "type-shop";
+      if (type === "交通") return "type-transit";
+      return "type-sight";
+    }
+
+    function renderHeader() {
+      document.getElementById("tripTitle").textContent = state.tripName;
+      document.getElementById("tripMeta").textContent = `${state.days} 天行程  ·  ${state.people} 人`;
+
+      const dayTabsEl = document.getElementById("dayTabs");
+      dayTabsEl.innerHTML = "";
+
+      for (let i = 1; i <= state.days; i += 1) {
+        const btn = document.createElement("button");
+        btn.className = `day-tab${state.activeDay === i ? " active" : ""}`;
+        btn.textContent = `第${i}天`;
+        btn.addEventListener("click", () => {
+          state.activeDay = i;
+          saveState();
+          render();
+        });
+        dayTabsEl.appendChild(btn);
+      }
+
+      document.querySelectorAll(".subtab-btn").forEach((btn) => {
+        const active = btn.dataset.view === state.activeView;
+        btn.classList.toggle("active", active);
+      });
+    }
+
+    function createTransportNode(transport, index) {
+      const m = transport.main || {};
+      const icon = m.icon ?? m.emoji ?? "";
+      const mode = m.mode ?? m.type ?? "";
+      const duration = m.duration ?? m.time ?? "";
+      const cost = m.cost ?? m.fee ?? "";
+      const mainLine = `${icon} ${mode} ${duration} ${cost}`.replace(/\s+/g, " ").trim();
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "transport";
+
+      const mainRow = document.createElement("div");
+      mainRow.className = "transport-main";
+      mainRow.innerHTML = `
+        <div class="transport-left">
+          <span class="transport-line">${mainLine}</span>
+        </div>
+        <button class="route-chip" type="button">替代路線</button>
+      `;
+
+      const alt = document.createElement("div");
+      alt.className = "alt-routes";
+      (transport.alternatives || []).forEach((t) => {
+        const altIcon = t.icon ?? t.emoji ?? "";
+        const altMode = t.mode ?? t.type ?? "";
+        const altDuration = t.duration ?? t.time ?? "";
+        const altCost = t.cost ?? t.fee ?? "";
+        const altLine = `${altIcon} ${altMode} ${altDuration} ${altCost}`.replace(/\s+/g, " ").trim();
+
+        const row = document.createElement("div");
+        row.className = "alt-route-item";
+        row.innerHTML = `<span class="alt-route-line">${altLine}</span>`;
+        row.addEventListener("click", (e) => {
+          e.stopPropagation();
+          transport.main = {
+            icon: altIcon,
+            mode: altMode,
+            duration: altDuration,
+            cost: altCost
+          };
+          alt.classList.remove("open");
+          saveState();
+          render();
+        });
+        alt.appendChild(row);
+      });
+
+      mainRow.querySelector(".route-chip").addEventListener("click", (e) => {
+        e.stopPropagation();
+        alt.classList.toggle("open");
+      });
+
+      wrapper.append(mainRow, alt);
+      wrapper.dataset.transportIndex = String(index);
+      return wrapper;
+    }
+
+    function formatCurrency(num) {
+      return `¥${num.toLocaleString("en-US")}`;
+    }
+
+    function parseYen(value) {
+      if (!value) return 0;
+      if (value.includes("免費") || value.includes("自由購物")) return 0;
+      if (!value.includes("¥")) return 0;
+      const matched = value.replace(/,/g, "").match(/¥\s*([\d.]+)/);
+      if (!matched) return 0;
+      return Number(matched[1]) || 0;
+    }
+
+    function makeEditable(el, day, itemId, field) {
+      el.addEventListener("click", () => {
+        const list = dayItems(day);
+        const item = list.find((i) => i.id === itemId);
+        if (!item) return;
+        const current = item[field] || "";
+        let editor;
+
+        if (field === "stay") {
+          editor = document.createElement("select");
+          editor.className = "inline-select";
+          const stayOptions = [
+            "15分",
+            "30分",
+            "45分",
+            "1小時",
+            "1.5小時",
+            "2小時",
+            "3小時以上"
+          ];
+          if (current && !stayOptions.includes(current)) {
+            stayOptions.unshift(current);
+          }
+          stayOptions.forEach((opt) => {
+            const op = document.createElement("option");
+            op.value = opt;
+            op.textContent = opt;
+            editor.appendChild(op);
+          });
+          editor.value = current || "45分";
+        } else {
+          editor = document.createElement("input");
+          editor.className = "inline-input";
+          editor.type = "text";
+          editor.placeholder = "如 ¥800/人 或 免費";
+          editor.value = current;
+        }
+
+        const saveInline = () => {
+          const next = (editor.value || "").trim();
+          item[field] = next || (field === "stay" ? "45分" : "未設定");
+          saveState();
+          render();
+        };
+
+        editor.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            saveInline();
+          }
+        });
+        editor.addEventListener("blur", saveInline, { once: true });
+
+        el.replaceWith(editor);
+        editor.focus();
+        if (editor.select) editor.select();
+      });
+    }
+
+    function makeNoteEditable(day, itemId, noteDisplayEl) {
+      noteDisplayEl.addEventListener("click", () => {
+        const item = dayItems(day).find((i) => i.id === itemId);
+        if (!item) return;
+
+        const textarea = document.createElement("textarea");
+        textarea.className = "note-editor";
+        textarea.placeholder = "點擊新增備註…";
+        textarea.value = item.note || "";
+
+        const saveNote = () => {
+          item.note = textarea.value.trim();
+          saveState();
+          render();
+        };
+
+        textarea.addEventListener("keydown", (ev) => {
+          if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
+            ev.preventDefault();
+            saveNote();
+          }
+        });
+        textarea.addEventListener("blur", saveNote, { once: true });
+
+        noteDisplayEl.replaceWith(textarea);
+        textarea.focus();
+      });
+    }
+
+    function createCardNode(item, day) {
+      const card = document.createElement("article");
+      card.className = `card${item.done ? " done" : ""}`;
+      card.draggable = state.reorderMode;
+      card.dataset.id = item.id;
+
+      const expandClass = item.expanded ? "expanded" : "";
+      const detailOpen = item.expanded ? "open" : "";
+      const doneClass = item.done ? "done" : "";
+      card.innerHTML = `
+        <div class="card-head">
+          <div class="time">${item.time}</div>
+          <div>
+            <h3 class="place-title">${item.title}</h3>
+            <div class="subtitle">${item.subtitle}</div>
+          </div>
+          <div class="head-actions">
+            <button class="complete-btn ${doneClass}" title="完成">✓</button>
+            <button class="expand-btn ${expandClass}" title="展開">⌄</button>
+          </div>
+        </div>
+        <div class="tag-row">
+          <span class="type-tag ${typeClass(item.type)}">${item.type}</span>
+          <span class="editable" data-edit="stay">${item.stay}</span>
+          <span class="editable" data-edit="cost">${item.cost}</span>
+        </div>
+        <div class="detail ${detailOpen}">
+          <div class="detail-inner">
+            詳細：可記錄集合時間、注意事項、雨天備案等。<br />
+            提示：點擊「停留時間 / 費用」可直接編輯。
+            <div class="note-display ${item.note ? "" : "placeholder"}" data-note="1">${item.note ? item.note : "點擊新增備註…"}</div>
+          </div>
+        </div>
+      `;
+
+      const completeBtn = card.querySelector(".complete-btn");
+      const expandBtn = card.querySelector(".expand-btn");
+      const stayEl = card.querySelector('[data-edit="stay"]');
+      const costEl = card.querySelector('[data-edit="cost"]');
+      const noteEl = card.querySelector('[data-note="1"]');
+
+      completeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const target = dayItems(day).find((i) => i.id === item.id);
+        if (!target) return;
+        target.done = !target.done;
+        saveState();
+        render();
+      });
+
+      expandBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const target = dayItems(day).find((i) => i.id === item.id);
+        if (!target) return;
+        target.expanded = !target.expanded;
+        saveState();
+        render();
+      });
+
+      makeEditable(stayEl, day, item.id, "stay");
+      makeEditable(costEl, day, item.id, "cost");
+      makeNoteEditable(day, item.id, noteEl);
+
+      if (state.reorderMode) {
+        card.addEventListener("dragstart", () => {
+          draggingId = item.id;
+          card.classList.add("dragging");
+        });
+
+        card.addEventListener("dragend", () => {
+          draggingId = null;
+          card.classList.remove("dragging");
+        });
+
+        card.addEventListener("dragover", (e) => {
+          e.preventDefault();
+        });
+
+        card.addEventListener("drop", (e) => {
+          e.preventDefault();
+          if (!draggingId || draggingId === item.id) return;
+          const list = dayItems(day);
+          const from = list.findIndex((i) => i.id === draggingId);
+          const to = list.findIndex((i) => i.id === item.id);
+          if (from < 0 || to < 0) return;
+          const [moved] = list.splice(from, 1);
+          list.splice(to, 0, moved);
+          // 交通段範例為示意資料，排序後先保留原有段落數量與內容。
+          saveState();
+          render();
+        });
+      }
+
+      return card;
+    }
+
+    function renderItinerary() {
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+      const day = state.activeDay;
+      const items = dayItems(day);
+      const transports = dayTransports(day);
+
+      if (!items.length) {
+        const empty = document.createElement("div");
+        empty.className = "day-empty";
+        empty.textContent = `第${day}天目前尚無行程`;
+        content.appendChild(empty);
+        return;
+      }
+
+      items.forEach((item, idx) => {
+        const block = document.createElement("div");
+        block.className = "itinerary-item";
+        block.appendChild(createCardNode(item, day));
+        content.appendChild(block);
+
+        if (idx < items.length - 1 && transports[idx]) {
+          content.appendChild(createTransportNode(transports[idx], idx));
+        }
+      });
+
+      const totalPerPerson = items.reduce((sum, i) => sum + parseYen(i.cost), 0);
+      const totalEl = document.createElement("div");
+      totalEl.className = "day-total";
+      totalEl.textContent = `今日費用小計 ${formatCurrency(totalPerPerson)}／人`;
+      content.appendChild(totalEl);
+    }
+
+    const MAP_STYLE_NIGHT = [
+      { elementType: "geometry", stylers: [{ color: "#1d2c4d" }] },
+      { elementType: "labels.text.fill", stylers: [{ color: "#8ec3b9" }] },
+      { elementType: "labels.text.stroke", stylers: [{ color: "#1a3646" }] },
+      { featureType: "road", elementType: "geometry", stylers: [{ color: "#304a7d" }] },
+      { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#98a5be" }] },
+      { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1626" }] },
+      { featureType: "poi", elementType: "geometry", stylers: [{ color: "#283d6a" }] }
+    ];
+
+    const PLACE_COORDS_BY_DAY = {
+      1: {
+        "大濠公園": { lat: 33.5841, lng: 130.3686 },
+        "大濠公園散步": { lat: 33.5841, lng: 130.3686 },
+        "一蘭拉麵本社總本店": { lat: 33.5897, lng: 130.4201 },
+        "一蘭拉麵 本社總本店": { lat: 33.5897, lng: 130.4201 },
+        "天神地下街": { lat: 33.5903, lng: 130.3987 }
+      }
+    };
+
+    function mapPinColor(type) {
+      if (type === "餐飲") return "#4ade80";
+      if (type === "購物") return "#60a5fa";
+      if (type === "交通") return "#f472b6";
+      return "#fb923c";
+    }
+
+    function svgMarkerDataUrl(number, color) {
+      const n = String(number);
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="16" fill="${color}" />
+          <text x="18" y="23" text-anchor="middle"
+                font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', Arial"
+                font-size="14" font-weight="800" fill="#ffffff">${n}</text>
+        </svg>
+      `.trim();
+      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
+    function clearMapMarkers() {
+      gMarkers.forEach((m) => m.setMap(null));
+      gMarkers = [];
+    }
+
+    function ensureMapInitialized() {
+      const mapEl = document.getElementById("gmap");
+      if (!mapEl) return;
+      if (!window.google || !window.google.maps) return;
+      if (gmap) return;
+
+      gmap = new google.maps.Map(mapEl, {
+        center: { lat: 33.5904, lng: 130.4017 },
+        zoom: 13,
+        styles: MAP_STYLE_NIGHT,
+        mapTypeId: "roadmap",
+        disableDefaultUI: true,
+        zoomControl: true,
+        gestureHandling: "greedy"
+      });
+      gInfoWindow = new google.maps.InfoWindow();
+    }
+
+    function updateMapMarkersForDay(day) {
+      ensureMapInitialized();
+      if (!gmap) return;
+
+      clearMapMarkers();
+      if (gInfoWindow) gInfoWindow.close();
+
+      const coords = PLACE_COORDS_BY_DAY[day] || {};
+      const items = dayItems(day);
+      let bounds = new google.maps.LatLngBounds();
+      let hasAny = false;
+
+      items.forEach((item, idx) => {
+        const pos = coords[item.title];
+        if (!pos) return;
+
+        const color = mapPinColor(item.type);
+        const marker = new google.maps.Marker({
+          map: gmap,
+          position: pos,
+          title: item.title,
+          icon: {
+            url: svgMarkerDataUrl(idx + 1, color),
+            scaledSize: new google.maps.Size(36, 36),
+            anchor: new google.maps.Point(18, 18)
+          }
+        });
+
+        marker.addListener("click", () => {
+          if (!gInfoWindow) return;
+          const safeTime = String(item.time || "");
+          const safeTitle = String(item.title || "");
+          const safeType = String(item.type || "");
+          const safeCost = String(item.cost || "");
+          const navUrl = `https://maps.google.com/?q=${encodeURIComponent(safeTitle)}`;
+          const html = `
+            <div style="background:#1a1d27;color:#fff;padding:12px;border-radius:8px;min-width:200px">
+              <div style="font-size:12px;color:#94a3b8">${safeTime}</div>
+              <div style="font-size:16px;font-weight:bold;margin:4px 0">${safeTitle}</div>
+              <div style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;background:${color}">${safeType}</div>
+              <div style="margin-top:8px;font-size:13px;color:#94a3b8">${safeCost}</div>
+              <a href="${navUrl}" target="_blank"
+                 style="display:block;margin-top:10px;background:#3b82f6;color:#fff;
+                        text-align:center;padding:8px;border-radius:6px;text-decoration:none;font-size:13px">
+                Google Maps 導航
+              </a>
+            </div>
+          `;
+          gInfoWindow.setContent(html);
+          gInfoWindow.open({ map: gmap, anchor: marker });
+        });
+
+        gMarkers.push(marker);
+        bounds.extend(pos);
+        hasAny = true;
+      });
+
+      if (hasAny) {
+        gmap.fitBounds(bounds, 60);
+      } else {
+        gmap.setCenter({ lat: 33.5904, lng: 130.4017 });
+        gmap.setZoom(13);
+      }
+    }
+
+    function renderMapView() {
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+
+      const shell = document.createElement("div");
+      shell.className = "map-shell";
+      shell.innerHTML = `
+        <div class="map-type-toggle">
+          <button class="map-type-btn active" type="button" data-maptype="roadmap">地圖</button>
+          <button class="map-type-btn" type="button" data-maptype="satellite">衛星</button>
+        </div>
+        <div id="gmap"></div>
+      `;
+      content.appendChild(shell);
+
+      shell.querySelectorAll(".map-type-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          shell.querySelectorAll(".map-type-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          ensureMapInitialized();
+          if (gmap) gmap.setMapTypeId(btn.dataset.maptype);
+        });
+      });
+
+      updateMapMarkersForDay(state.activeDay);
+    }
+
+    function render() {
+      renderHeader();
+      if (state.activeView === "itinerary") {
+        renderItinerary();
+      } else {
+        renderMapView();
+      }
+      document.getElementById("reorderBtn").textContent = state.reorderMode ? "✓ 完成排序" : "✎ 調整順序";
+    }
+
+    document.querySelectorAll(".subtab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.activeView = btn.dataset.view || "itinerary";
+        saveState();
+        render();
+      });
+    });
+
+    document.getElementById("reorderBtn").addEventListener("click", () => {
+      state.reorderMode = !state.reorderMode;
+      saveState();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
