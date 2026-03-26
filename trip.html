@@ -2454,6 +2454,23 @@
     }
 
     function createCardNode(item, day) {
+      // 防護：確保欄位不為 undefined
+      item = {
+        id: item.id || uid(),
+        title: item.title || item.name || "未命名景點",
+        subtitle: item.subtitle || "",
+        type: item.type || "觀光",
+        time: item.time || "--:--",
+        stay: item.stay || "45分",
+        cost: item.cost || "未設定",
+        note: item.note || "",
+        bestTime: item.bestTime || "",
+        done: !!item.done,
+        expanded: !!item.expanded,
+        lat: item.lat || null,
+        lng: item.lng || null,
+        ...item
+      };
       const card = document.createElement("article");
       card.className = `card${item.done ? " done" : ""}${state.reorderMode ? " reorder" : ""}`;
       card.dataset.id = item.id;
@@ -2617,7 +2634,12 @@
         totalEl.textContent = `今日費用小計 ${formatCurrency(totalPerPerson)}／人`;
         content.appendChild(totalEl);
       } catch (e) {
-        console.error("Render error:", e);
+        console.error(
+          "Render error:",
+          e,
+          "state.itineraryByDay[day]:",
+          JSON.stringify(state.itineraryByDay[state.activeDay])
+        );
         const c = document.getElementById("content");
         if (c) {
           c.innerHTML =
