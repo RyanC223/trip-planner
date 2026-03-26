@@ -2557,6 +2557,35 @@
           localStorage.setItem(seenKey, "1");
         }
       }
+
+      const legend = document.getElementById("mapLegend");
+      if (legend) {
+        legend.style.opacity = "1";
+        legend.style.transition = "opacity 1s ease";
+        clearTimeout(window._legendTimer);
+        window._legendTimer = setTimeout(() => {
+          legend.style.opacity = "0.3";
+        }, 3000);
+
+        legend.addEventListener("touchstart", () => {
+          legend.style.opacity = "1";
+          clearTimeout(window._legendTimer);
+          window._legendTimer = setTimeout(() => {
+            legend.style.opacity = "0.3";
+          }, 3000);
+        }, { passive: true });
+
+        legend.addEventListener("mouseenter", () => {
+          legend.style.opacity = "1";
+          clearTimeout(window._legendTimer);
+        });
+
+        legend.addEventListener("mouseleave", () => {
+          window._legendTimer = setTimeout(() => {
+            legend.style.opacity = "0.3";
+          }, 2000);
+        });
+      }
     }
 
     function render() {
