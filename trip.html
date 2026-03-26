@@ -121,6 +121,17 @@
       font-size: 0.82rem;
     }
 
+    .date-btn {
+      border: 1px solid #2f3650;
+      background: rgba(32, 38, 55, 0.55);
+      color: #e8edff;
+      border-radius: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
     .toast {
       position: absolute;
       left: 50%;
@@ -206,6 +217,23 @@
       display: inline-flex;
       gap: 8px;
       padding-bottom: 2px;
+      align-items: flex-end;
+    }
+
+    .day-tab-col {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 64px;
+    }
+
+    .day-tab-weather {
+      font-size: 0.68rem;
+      color: #9aa3bd;
+      line-height: 1.2;
+      min-height: 1.1em;
+      white-space: nowrap;
     }
 
     .day-tab {
@@ -218,6 +246,19 @@
       white-space: nowrap;
       cursor: pointer;
       transition: 0.18s ease;
+    }
+
+    .day-tab-main {
+      display: block;
+      line-height: 1.15;
+    }
+
+    .day-tab-date {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.66rem;
+      color: #b6c0db;
+      line-height: 1;
     }
 
     .day-tab.active {
@@ -738,6 +779,93 @@
       text-align: right;
     }
 
+    .overview-root {
+      padding-bottom: 8px;
+    }
+
+    .ov-day {
+      margin-bottom: 22px;
+    }
+
+    .ov-day-title {
+      font-size: 0.95rem;
+      font-weight: 780;
+      margin: 0 0 10px 2px;
+      color: #e8edff;
+      letter-spacing: 0.02em;
+    }
+
+    .ov-timeline {
+      position: relative;
+      margin-left: 6px;
+      padding-left: 18px;
+      border-left: 2px solid #374151;
+    }
+
+    .ov-item {
+      position: relative;
+      padding: 6px 0 10px 0;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .ov-item::before {
+      content: "";
+      position: absolute;
+      left: -21px;
+      top: 10px;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--ov-dot, #64748b);
+      border: 2px solid #0f1117;
+      box-sizing: border-box;
+      transform: translateX(-1px);
+    }
+
+    .ov-item.done {
+      opacity: 0.55;
+    }
+
+    .ov-item.done .ov-name,
+    .ov-item.done .ov-time {
+      text-decoration: line-through;
+    }
+
+    .ov-time {
+      font-size: 0.82rem;
+      color: #c7d0ec;
+      font-variant-numeric: tabular-nums;
+      min-width: 44px;
+      flex-shrink: 0;
+    }
+
+    .ov-name {
+      font-size: 0.86rem;
+      color: #f0f3ff;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+
+    .ov-dot {
+      display: none;
+    }
+
+    .ov-empty {
+      font-size: 0.82rem;
+      color: #8b93ad;
+      padding: 4px 0 8px 0;
+    }
+
+    .ov-total {
+      margin-top: 8px;
+      font-size: 0.84rem;
+      color: #c9d2ee;
+      text-align: right;
+    }
+
     .add-spot-btn {
       width: 100%;
       margin-top: 12px;
@@ -862,6 +990,7 @@
           <div class="room-line" id="roomLine" style="display:none">
             <span id="roomText"></span>
             <button class="copy-btn" type="button" id="copyRoomBtn" title="複製行程碼">📋</button>
+            <button class="date-btn" type="button" id="startDateBtn" title="設定出發日期">📅 設定日期</button>
           </div>
         </div>
         <div class="top-actions">
@@ -982,6 +1111,25 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="startDateModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="startDateTitle">
+      <div class="modal-head">
+        <p class="modal-title" id="startDateTitle">設定出發日期</p>
+        <button class="modal-close" type="button" id="startDateClose" aria-label="Close">✕</button>
+      </div>
+      <form class="modal-form" id="startDateForm">
+        <div class="field">
+          <input id="startDateInput" type="date" />
+        </div>
+        <div style="font-size:0.8rem;color:#9ca3af">設定後天氣預報將對應實際旅行日期</div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" type="submit">確認</button>
+          <button class="btn" type="button" id="startDateCancel" style="background:#242b3f;color:#e8edff;border:1px solid #424c6c">取消</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     const STORAGE_KEY = "tripPlanner_fukuoka_v1";
     const DATA_VERSION = 3;
@@ -1021,6 +1169,7 @@
       tripName: "福岡家庭旅遊",
       days: 6,
       people: 4,
+      startDate: "",
       activeDay: 1,
       activeView: "itinerary",
       reorderMode: false,
@@ -1103,6 +1252,9 @@
     let state = loadState();
     let draggingId = null;
     let reorderDirty = false;
+    let weatherCache = null;
+    let weatherMeta = { hasStartDate: false, offsetDays: 0, startTooFar: false };
+    let pendingScrollItemId = null;
     let modalCtx = { day: 1, itemId: null };
     let transportModalCtx = { day: 1, index: 0 };
 
@@ -1158,7 +1310,8 @@
     function isAnyModalOpen() {
       return (
         document.getElementById("spotModal")?.classList.contains("show") ||
-        document.getElementById("transportModal")?.classList.contains("show")
+        document.getElementById("transportModal")?.classList.contains("show") ||
+        document.getElementById("startDateModal")?.classList.contains("show")
       );
     }
 
@@ -1187,6 +1340,7 @@
     }
 
     function dayItems(day) {
+      if (day === 0) return [];
       return state.itineraryByDay[day] || [];
     }
 
@@ -1259,6 +1413,94 @@
       return "type-sight";
     }
 
+    function typeDotColor(type) {
+      if (type === "餐飲") return "#4ade80";
+      if (type === "購物") return "#60a5fa";
+      if (type === "交通") return "#f472b6";
+      return "#fb923c";
+    }
+
+    function localDayStart(d = new Date()) {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    }
+
+    function parseYMD(ymd) {
+      if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+      const [y, m, d] = ymd.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function formatMD(dateObj) {
+      return `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+    }
+
+    function tripDateForDay(dayIndex) {
+      const start = parseYMD(state.startDate);
+      const base = start || localDayStart();
+      const d = new Date(base);
+      d.setDate(d.getDate() + (dayIndex - 1));
+      return d;
+    }
+
+    function weekdayLabelForTripDay(dayIndex) {
+      const d = tripDateForDay(dayIndex);
+      const w = ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
+      return `星期${w}`;
+    }
+
+    function weatherIconFromCode(code) {
+      const c = Number(code);
+      if (c === 0) return "☀️";
+      if ([1, 2, 3].includes(c)) return "⛅";
+      if ([45, 48].includes(c)) return "🌫️";
+      if ([51, 53, 55, 61, 63, 65].includes(c)) return "🌧️";
+      if ([71, 73, 75].includes(c)) return "❄️";
+      if ([80, 81, 82].includes(c)) return "🌦️";
+      if ([95, 96, 99].includes(c)) return "⛈️";
+      return "⛅";
+    }
+
+    function fetchWeatherForecast() {
+      if (!roomId) return;
+      const hasStartDate = !!state.startDate;
+      const start = parseYMD(state.startDate);
+      const today = localDayStart();
+      const rawOffset = start ? Math.floor((start - today) / 86400000) : 0;
+      const offset = Number.isFinite(rawOffset) ? rawOffset : 0;
+      const tooFar = hasStartDate && offset > 14;
+
+      weatherMeta = { hasStartDate, offsetDays: offset, startTooFar: tooFar };
+      if (tooFar) {
+        weatherCache = {};
+        renderHeader();
+        return;
+      }
+
+      const needed = hasStartDate ? Math.min(16, Math.max(7, offset + state.days + 2)) : 7;
+      const url =
+        `https://api.open-meteo.com/v1/forecast?latitude=33.59&longitude=130.40&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=${needed}`;
+      fetch(url)
+        .then((r) => r.json())
+        .then((json) => {
+          const daily = json.daily;
+          if (!daily || !daily.weathercode) return;
+          weatherCache = {};
+          for (let day = 1; day <= state.days; day += 1) {
+            const idx = hasStartDate ? Math.max(0, offset + day - 1) : day - 1;
+            if (idx < 0 || idx >= daily.weathercode.length) continue;
+            weatherCache[day] = {
+              icon: weatherIconFromCode(daily.weathercode[idx]),
+              max: Math.round(daily.temperature_2m_max[idx]),
+              min: Math.round(daily.temperature_2m_min[idx])
+            };
+          }
+          renderHeader();
+        })
+        .catch(() => {});
+    }
+
     function renderHeader() {
       document.getElementById("tripTitle").textContent = state.tripName;
       document.getElementById("tripMeta").textContent = `${state.days} 天行程  ·  ${state.people} 人`;
@@ -1266,22 +1508,131 @@
       const dayTabsEl = document.getElementById("dayTabs");
       dayTabsEl.innerHTML = "";
 
+      const overviewCol = document.createElement("div");
+      overviewCol.className = "day-tab-col";
+      const overviewBtn = document.createElement("button");
+      overviewBtn.className = `day-tab${state.activeDay === 0 ? " active" : ""}`;
+      overviewBtn.type = "button";
+      overviewBtn.textContent = "總覽";
+      overviewBtn.addEventListener("click", () => {
+        if (state.reorderMode && reorderDirty) saveState();
+        reorderDirty = false;
+        state.reorderMode = false;
+        state.activeDay = 0;
+        saveState();
+        render();
+      });
+      const overviewWeather = document.createElement("div");
+      overviewWeather.className = "day-tab-weather";
+      overviewWeather.innerHTML = "&nbsp;";
+      overviewCol.appendChild(overviewBtn);
+      overviewCol.appendChild(overviewWeather);
+      dayTabsEl.appendChild(overviewCol);
+
       for (let i = 1; i <= state.days; i += 1) {
+        const col = document.createElement("div");
+        col.className = "day-tab-col";
         const btn = document.createElement("button");
+        btn.type = "button";
         btn.className = `day-tab${state.activeDay === i ? " active" : ""}`;
-        btn.textContent = `第${i}天`;
+        if (state.startDate) {
+          btn.innerHTML = `<span class="day-tab-main">第${i}天</span><span class="day-tab-date">${formatMD(tripDateForDay(i))}</span>`;
+        } else {
+          btn.textContent = `第${i}天`;
+        }
         btn.addEventListener("click", () => {
           state.activeDay = i;
           saveState();
           render();
         });
-        dayTabsEl.appendChild(btn);
+        const wEl = document.createElement("div");
+        wEl.className = "day-tab-weather";
+        const w = weatherCache && weatherCache[i];
+        if (weatherMeta.startTooFar) {
+          wEl.textContent = `距出發還有${weatherMeta.offsetDays}天`;
+        } else if (w) {
+          wEl.textContent = weatherMeta.hasStartDate
+            ? `${w.icon} ${w.max}°/${w.min}°`
+            : `（未設出發日） ${w.icon} ${w.max}°/${w.min}°`;
+        } else {
+          wEl.textContent = "\u00a0";
+        }
+        col.appendChild(btn);
+        col.appendChild(wEl);
+        dayTabsEl.appendChild(col);
       }
 
       document.querySelectorAll(".subtab-btn").forEach((btn) => {
         const active = btn.dataset.view === state.activeView;
         btn.classList.toggle("active", active);
       });
+    }
+
+    function renderOverview() {
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+      const root = document.createElement("div");
+      root.className = "overview-root";
+
+      for (let d = 1; d <= state.days; d += 1) {
+        const items = dayItems(d);
+        const dayBlock = document.createElement("section");
+        dayBlock.className = "ov-day";
+
+        const title = document.createElement("h3");
+        title.className = "ov-day-title";
+        if (state.startDate) {
+          title.textContent = `第${d}天 · ${formatMD(tripDateForDay(d))}（${weekdayLabelForTripDay(d)}）`;
+        } else {
+          title.textContent = `第${d}天 · ${weekdayLabelForTripDay(d)}（今天起算）`;
+        }
+        dayBlock.appendChild(title);
+
+        const timeline = document.createElement("div");
+        timeline.className = "ov-timeline";
+
+        if (!items.length) {
+          const empty = document.createElement("div");
+          empty.className = "ov-empty";
+          empty.textContent = "本日尚未安排景點";
+          timeline.appendChild(empty);
+        } else {
+          items.forEach((item) => {
+            const row = document.createElement("div");
+            row.className = `ov-item${item.done ? " done" : ""}`;
+            row.style.setProperty("--ov-dot", typeDotColor(item.type));
+            row.addEventListener("click", () => {
+              pendingScrollItemId = item.id;
+              state.activeDay = d;
+              state.activeView = "itinerary";
+              state.reorderMode = false;
+              saveState();
+              render();
+            });
+            const t = document.createElement("span");
+            t.className = "ov-time";
+            t.textContent = item.time || "";
+            const n = document.createElement("span");
+            n.className = "ov-name";
+            n.textContent = item.title || "";
+            row.appendChild(t);
+            row.appendChild(n);
+            timeline.appendChild(row);
+          });
+        }
+
+        dayBlock.appendChild(timeline);
+
+        const totalPerPerson = items.reduce((sum, i) => sum + parseYen(i.cost), 0);
+        const tot = document.createElement("div");
+        tot.className = "ov-total";
+        tot.textContent = `當日費用小計 ${formatCurrency(totalPerPerson)}／人`;
+        dayBlock.appendChild(tot);
+
+        root.appendChild(dayBlock);
+      }
+
+      content.appendChild(root);
     }
 
     function showToast(text = "已複製！") {
@@ -1595,6 +1946,7 @@
       const card = document.createElement("article");
       card.className = `card${item.done ? " done" : ""}${state.reorderMode ? " reorder" : ""}`;
       card.dataset.id = item.id;
+      card.setAttribute("data-card-id", item.id);
 
       const expandClass = item.expanded ? "expanded" : "";
       const detailOpen = item.expanded ? "open" : "";
@@ -1700,6 +2052,7 @@
     }
 
     function renderItinerary() {
+      if (!state.activeDay) return;
       const content = document.getElementById("content");
       content.innerHTML = "";
       const day = state.activeDay;
@@ -1868,6 +2221,7 @@
     }
 
     function renderMapView() {
+      if (!state.activeDay) return;
       const content = document.getElementById("content");
       content.innerHTML = "";
 
@@ -1899,14 +2253,35 @@
         renderRoomScreen();
         return;
       }
+      if (state.activeDay === 0) {
+        state.reorderMode = false;
+      }
       setRoomHeaderUI();
       renderHeader();
-      if (state.activeView === "itinerary") {
+      const subtabs = document.querySelector(".subtabs");
+      if (subtabs) subtabs.style.display = state.activeDay === 0 ? "none" : "";
+      const reorderBtn = document.getElementById("reorderBtn");
+      if (reorderBtn) {
+        reorderBtn.style.display = state.activeDay === 0 ? "none" : "";
+        reorderBtn.textContent = state.reorderMode ? "✓ 完成排序" : "✎ 調整順序";
+      }
+      if (state.activeDay === 0) {
+        renderOverview();
+      } else if (state.activeView === "itinerary") {
         renderItinerary();
       } else {
         renderMapView();
       }
-      document.getElementById("reorderBtn").textContent = state.reorderMode ? "✓ 完成排序" : "✎ 調整順序";
+      if (pendingScrollItemId && state.activeDay > 0 && state.activeView === "itinerary") {
+        const sid = pendingScrollItemId;
+        pendingScrollItemId = null;
+        requestAnimationFrame(() => {
+          const el = document.querySelector(
+            `[data-card-id="${String(sid).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"]`
+          );
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
     }
 
     document.querySelectorAll(".subtab-btn").forEach((btn) => {
@@ -1918,6 +2293,7 @@
     });
 
     document.getElementById("reorderBtn").addEventListener("click", () => {
+      if (state.activeDay === 0) return;
       const next = !state.reorderMode;
       if (state.reorderMode && !next) {
         if (reorderDirty) saveState();
@@ -2048,6 +2424,21 @@
       location.reload();
     });
 
+    function openStartDateModal() {
+      const overlay = document.getElementById("startDateModal");
+      const input = document.getElementById("startDateInput");
+      input.value = state.startDate || "";
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden", "false");
+      input.focus();
+    }
+
+    function closeStartDateModal() {
+      const overlay = document.getElementById("startDateModal");
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden", "true");
+    }
+
     function startRoomSync() {
       if (!db || !roomId) return;
       db.ref("rooms/" + roomId).on("value", (snapshot) => {
@@ -2070,7 +2461,27 @@
         } catch {}
       }
       startRoomSync();
+      fetchWeatherForecast();
     }
+
+    document.getElementById("startDateBtn").addEventListener("click", () => {
+      if (!roomId) return;
+      openStartDateModal();
+    });
+    document.getElementById("startDateModal").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) closeStartDateModal();
+    });
+    document.getElementById("startDateClose").addEventListener("click", closeStartDateModal);
+    document.getElementById("startDateCancel").addEventListener("click", closeStartDateModal);
+    document.getElementById("startDateForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const v = document.getElementById("startDateInput").value || "";
+      state.startDate = v;
+      saveState();
+      closeStartDateModal();
+      fetchWeatherForecast();
+      render();
+    });
 
     render();
   </script>
