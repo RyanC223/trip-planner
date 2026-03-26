@@ -1464,7 +1464,7 @@
 
   <script>
     const STORAGE_KEY = "tripPlanner_fukuoka_v1";
-    const DATA_VERSION = 3;
+    const DATA_VERSION = 4;
     const roomId = new URLSearchParams(location.search).get("room");
 
     // Firebase
@@ -1622,10 +1622,44 @@
 
     function migrateStateIfNeeded(state) {
       console.log("目前 dataVersion:", state.dataVersion);
-      if (!state.dataVersion || state.dataVersion < DATA_VERSION) {
+      const prev = Number(state.dataVersion || 0);
+
+      // v3 migration: normalize transport structure (legacy safety)
+      if (prev < 3) {
         state.transportByDay = structuredClone(defaultData.transportByDay);
+      }
+
+      // v4 migration: add lat/lng for day1 spots
+      if (prev < 4) {
+        const coordFallback = {
+          "大濠公園散步": { lat: 33.5841, lng: 130.3686 },
+          "大濠公園": { lat: 33.5841, lng: 130.3686 },
+          "一蘭拉麵 本社總本店": { lat: 33.5897, lng: 130.4201 },
+          "一蘭拉麵本社總本店": { lat: 33.5897, lng: 130.4201 },
+          "天神地下街": { lat: 33.5903, lng: 130.3987 }
+        };
+
+        const day1 = state.itineraryByDay?.[1];
+        if (Array.isArray(day1)) {
+          day1.forEach((spot) => {
+            if (!spot) return;
+            const needLat = spot.lat == null;
+            const needLng = spot.lng == null;
+            if (!needLat && !needLng) return;
+            const fb = coordFallback[spot.title];
+            if (!fb) return;
+            if (needLat) spot.lat = fb.lat;
+            if (needLng) spot.lng = fb.lng;
+          });
+        }
+      }
+
+      if (prev < DATA_VERSION) {
         state.dataVersion = DATA_VERSION;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (db && roomId) {
+          db.ref("rooms/" + roomId).set(state);
+        }
       }
       return state;
     }
