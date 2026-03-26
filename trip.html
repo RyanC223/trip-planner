@@ -72,6 +72,115 @@
       margin: 0;
     }
 
+    .trip-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-edit-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid #2f3650;
+      background: rgba(32, 38, 55, 0.55);
+      color: #e8edff;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 0.86rem;
+    }
+
+    .title-input {
+      width: 100%;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid #3f4865;
+      background: #171d2c;
+      outline: none;
+    }
+
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+        padding: 0 !important;
+      }
+
+      .app {
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        max-width: none !important;
+      }
+
+      .header {
+        position: static !important;
+        background: white !important;
+        color: black !important;
+        border-bottom: 1px solid #ddd !important;
+      }
+
+      .trip-title,
+      .trip-meta,
+      .room-line {
+        color: black !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .content {
+        padding-bottom: 16px !important;
+      }
+
+      .card {
+        background: white !important;
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        color: black !important;
+      }
+
+      .subtitle,
+      .detail-inner,
+      .note-display,
+      .transport,
+      .transport-detail,
+      .day-total,
+      .ov-time,
+      .ov-name,
+      .ov-total,
+      .ov-day-title {
+        color: black !important;
+      }
+
+      .type-tag {
+        background: transparent !important;
+        border: 1px solid #ccc !important;
+        color: black !important;
+      }
+
+      .detail {
+        max-height: none !important;
+        opacity: 1 !important;
+        margin-top: 10px !important;
+      }
+
+      .detail.open {
+        max-height: none !important;
+      }
+
+      .ov-day + .ov-day {
+        break-before: page;
+        page-break-before: always;
+      }
+    }
+
     .trip-meta {
       margin-top: 6px;
       color: var(--muted);
@@ -985,16 +1094,20 @@
       <div class="toast" id="toast">已複製！</div>
       <div class="top-row">
         <div>
-          <h1 class="trip-title" id="tripTitle"></h1>
+          <div class="trip-title-row">
+            <h1 class="trip-title" id="tripTitle"></h1>
+            <button class="title-edit-btn no-print" type="button" id="editTripTitleBtn" title="編輯旅程名稱">✎</button>
+          </div>
           <div class="trip-meta" id="tripMeta"></div>
           <div class="room-line" id="roomLine" style="display:none">
             <span id="roomText"></span>
-            <button class="copy-btn" type="button" id="copyRoomBtn" title="複製行程碼">📋</button>
-            <button class="date-btn" type="button" id="startDateBtn" title="設定出發日期">📅 設定日期</button>
+            <button class="copy-btn no-print" type="button" id="copyRoomBtn" title="複製行程碼">📋</button>
+            <button class="date-btn no-print" type="button" id="startDateBtn" title="設定出發日期">📅 設定日期</button>
           </div>
         </div>
         <div class="top-actions">
-          <button class="swap-btn" type="button" id="swapRoomBtn" style="display:none">🔄 換行程</button>
+          <button class="swap-btn no-print" type="button" id="swapRoomBtn" style="display:none">🔄 換行程</button>
+          <button class="swap-btn no-print" type="button" id="exportBtn" style="display:none">📄 匯出</button>
         </div>
       </div>
 
@@ -1010,7 +1123,7 @@
 
     <section class="content" id="content"></section>
 
-    <button class="fab" id="reorderBtn">✎ 調整順序</button>
+    <button class="fab no-print" id="reorderBtn">✎ 調整順序</button>
   </main>
 
   <div class="modal-overlay" id="spotModal" aria-hidden="true">
@@ -1645,6 +1758,7 @@
     function setRoomHeaderUI() {
       const line = document.getElementById("roomLine");
       const swapBtn = document.getElementById("swapRoomBtn");
+      const exportBtn = document.getElementById("exportBtn");
       const reorderBtn = document.getElementById("reorderBtn");
       const dayTabs = document.querySelector(".day-tabs-wrap");
       const subtabs = document.querySelector(".subtabs");
@@ -1652,6 +1766,7 @@
       if (roomId) {
         line.style.display = "flex";
         swapBtn.style.display = "inline-flex";
+        exportBtn.style.display = "inline-flex";
         document.getElementById("roomText").textContent = `行程碼：${roomId}`;
         if (reorderBtn) reorderBtn.style.display = "";
         if (dayTabs) dayTabs.style.display = "";
@@ -1659,6 +1774,7 @@
       } else {
         line.style.display = "none";
         swapBtn.style.display = "none";
+        exportBtn.style.display = "none";
         if (reorderBtn) reorderBtn.style.display = "none";
         if (dayTabs) dayTabs.style.display = "none";
         if (subtabs) subtabs.style.display = "none";
@@ -2481,6 +2597,53 @@
       closeStartDateModal();
       fetchWeatherForecast();
       render();
+    });
+
+    function beginEditTripTitle() {
+      const titleEl = document.getElementById("tripTitle");
+      const current = state.tripName || "";
+      const input = document.createElement("input");
+      input.className = "title-input";
+      input.type = "text";
+      input.value = current;
+
+      const save = () => {
+        const next = (input.value || "").trim() || "未命名行程";
+        state.tripName = next;
+        saveState();
+        renderHeader();
+        input.replaceWith(titleEl);
+        titleEl.textContent = next;
+      };
+
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          save();
+        }
+      });
+      input.addEventListener("blur", save, { once: true });
+
+      titleEl.replaceWith(input);
+      input.focus();
+      input.select();
+    }
+
+    document.getElementById("editTripTitleBtn").addEventListener("click", () => {
+      if (!roomId) return;
+      beginEditTripTitle();
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      if (!roomId) return;
+      // Ensure printable view: not map; keep overview or current day itinerary
+      if (state.activeView !== "itinerary") {
+        state.activeView = "itinerary";
+      }
+      state.reorderMode = false;
+      saveState();
+      render();
+      setTimeout(() => window.print(), 0);
     });
 
     render();
