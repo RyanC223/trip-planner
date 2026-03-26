@@ -1676,7 +1676,7 @@
       }
       try {
         const parsed = JSON.parse(raw);
-        return migrateStateIfNeeded(parsed);
+        return normalizeFirebaseArrays(migrateStateIfNeeded(parsed));
       } catch (err) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
         return structuredClone(defaultData);
@@ -3046,7 +3046,7 @@
       const localRaw = localStorage.getItem(STORAGE_KEY);
       if (localRaw) {
         try {
-          state = JSON.parse(localRaw);
+          state = normalizeFirebaseArrays(JSON.parse(localRaw));
         } catch {}
       }
       startRoomSync();
