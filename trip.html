@@ -1273,14 +1273,29 @@
       background: rgba(255, 255, 255, 0.02);
     }
 
+    .geo-results-hint {
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #fbbf24;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(251, 191, 36, 0.06);
+    }
+
     .geo-item {
       padding: 10px 12px;
       cursor: pointer;
       border-top: 1px solid rgba(255, 255, 255, 0.06);
+      border-left: 3px solid transparent;
+      transition: background 0.16s ease, border-color 0.16s ease;
     }
 
     .geo-item:first-child {
       border-top: 0;
+    }
+
+    .geo-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-left-color: #60a5fa;
     }
 
     .geo-item-title {
@@ -1290,11 +1305,41 @@
       line-height: 1.25;
     }
 
+    .geo-item-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .geo-item-choose {
+      font-size: 0.75rem;
+      color: #9aa4c0;
+      white-space: nowrap;
+    }
+
     .geo-item-sub {
       margin-top: 4px;
       font-size: 0.78rem;
       color: #9aa4c0;
       line-height: 1.35;
+    }
+
+    .geo-item.selected {
+      border-left-color: #4ade80 !important;
+      background: rgba(74, 222, 128, 0.08);
+    }
+
+    .geo-item-confirm {
+      margin-top: 6px;
+      color: #4ade80;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .geo-status.warn {
+      color: #f59e0b;
+      font-weight: 650;
     }
   </style>
 </head>
@@ -1844,11 +1889,12 @@
         });
       } else if (message) {
         status.style.display = "block";
-        status.classList.remove("good");
+        status.classList.remove("good", "warn");
+        if (message.startsWith("⚠")) status.classList.add("warn");
         status.textContent = message;
       } else {
         status.style.display = "none";
-        status.classList.remove("good");
+        status.classList.remove("good", "warn");
         status.textContent = "";
       }
     }
@@ -1865,18 +1911,37 @@
         return;
       }
 
+      const hint = document.createElement("div");
+      hint.className = "geo-results-hint";
+      hint.textContent = "👆 點選以下結果設定位置";
+      results.appendChild(hint);
+
       items.forEach((r) => {
         const div = document.createElement("div");
         div.className = "geo-item";
         const shortName = (r.formatted_address || "").split("、")[0].split(",")[0] || "結果";
         div.innerHTML = `
-          <div class="geo-item-title">${shortName}</div>
+          <div class="geo-item-head">
+            <div class="geo-item-title">${shortName}</div>
+            <div class="geo-item-choose">選擇 →</div>
+          </div>
           <div class="geo-item-sub">${r.formatted_address || ""}</div>
         `;
         div.addEventListener("click", () => {
           modalCtx.lat = r.geometry?.location?.lat ?? null;
           modalCtx.lng = r.geometry?.location?.lng ?? null;
-          results.style.display = "none";
+          results.innerHTML = "";
+          const selected = document.createElement("div");
+          selected.className = "geo-item selected";
+          selected.innerHTML = `
+            <div class="geo-item-head">
+              <div class="geo-item-title" style="font-weight:800">${shortName}</div>
+            </div>
+            <div class="geo-item-sub">${r.formatted_address || ""}</div>
+            <div class="geo-item-confirm">✅ 已設定：${r.formatted_address || shortName}</div>
+          `;
+          results.appendChild(selected);
+          results.style.display = "block";
           renderGeoUI("✅ 已設定位置");
         });
         results.appendChild(div);
@@ -1905,26 +1970,20 @@
             return;
           }
 
-          const container = document.getElementById("geoResults");
-          container.innerHTML = "";
-          results.slice(0, 3).forEach((r) => {
-            const div = document.createElement("div");
-            div.className = "geo-item";
-            const shortName = (r.formatted_address || "").split("、")[0].split(",")[0] || "結果";
-            div.innerHTML = `
-          <div class="geo-item-title">${shortName}</div>
-          <div class="geo-item-sub">${r.formatted_address || ""}</div>
-        `;
-            div.addEventListener("click", () => {
-              const loc = r.geometry?.location;
-              modalCtx.lat = typeof loc?.lat === "function" ? loc.lat() : loc?.lat ?? null;
-              modalCtx.lng = typeof loc?.lng === "function" ? loc.lng() : loc?.lng ?? null;
-              container.style.display = "none";
-              renderGeoUI("✅ 已設定位置");
-            });
-            container.appendChild(div);
+          const mapped = results.slice(0, 3).map((r) => {
+            const loc = r.geometry?.location;
+            return {
+              ...r,
+              geometry: {
+                ...(r.geometry || {}),
+                location: {
+                  lat: typeof loc?.lat === "function" ? loc.lat() : loc?.lat ?? null,
+                  lng: typeof loc?.lng === "function" ? loc.lng() : loc?.lng ?? null
+                }
+              }
+            };
           });
-          container.style.display = "block";
+          showGeoResults(mapped);
           renderGeoUI("");
         }
       );
@@ -2952,6 +3011,14 @@
       e.preventDefault();
       const day = modalCtx.day;
       const list = dayItems(day);
+      const geoResults = document.getElementById("geoResults");
+      const hasUnselectedResults =
+        geoResults &&
+        geoResults.style.display !== "none" &&
+        !!geoResults.querySelector(".geo-item:not(.selected)");
+      if (modalCtx.lat == null && hasUnselectedResults) {
+        renderGeoUI("⚠ 請先點選上方結果確認位置");
+      }
 
       const payload = {
         time: document.getElementById("f_time").value.trim(),
