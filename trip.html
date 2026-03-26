@@ -355,23 +355,16 @@
     }
 
     .map-legend {
-      position: absolute;
-      left: 12px;
-      bottom: 12px;
-      z-index: 5;
-      background: rgba(17, 21, 34, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.10);
-      border-radius: 14px;
-      padding: 10px 10px;
       color: #e8edff;
-      font-size: 0.78rem;
+      font-size: 11px;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
       align-items: center;
-      backdrop-filter: blur(10px);
-      transform-origin: left bottom;
+      transform-origin: left center;
       transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      border-radius: 10px;
+      padding: 2px 4px;
     }
 
     .map-legend.pulse {
@@ -961,16 +954,21 @@
 
     #gmap {
       width: 100%;
-      height: 100%;
+      height: calc(100% - 44px);
+    }
+
+    .map-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: rgba(15, 17, 23, 0.85);
+      backdrop-filter: blur(8px);
     }
 
     .map-type-toggle {
-      position: absolute;
-      left: 12px;
-      top: 12px;
       display: inline-flex;
       gap: 6px;
-      z-index: 5;
     }
 
     .map-type-btn {
@@ -2522,15 +2520,17 @@
       const shell = document.createElement("div");
       shell.className = "map-shell";
       shell.innerHTML = `
-        <div class="map-type-toggle">
-          <button class="map-type-btn active" type="button" data-maptype="roadmap">地圖</button>
-          <button class="map-type-btn" type="button" data-maptype="satellite">衛星</button>
-        </div>
-        <div class="map-legend" id="mapLegend">
-          <span class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>餐飲</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#60a5fa"></span>購物</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#fb923c"></span>觀光</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#f472b6"></span>交通</span>
+        <div class="map-top-bar">
+          <div class="map-type-toggle">
+            <button class="map-type-btn active" type="button" data-maptype="roadmap">地圖</button>
+            <button class="map-type-btn" type="button" data-maptype="satellite">衛星</button>
+          </div>
+          <div class="map-legend" id="mapLegend">
+            <span class="legend-item"><span style="color:#4ade80">●</span> 餐飲</span>
+            <span class="legend-item"><span style="color:#60a5fa">●</span> 購物</span>
+            <span class="legend-item"><span style="color:#fb923c">●</span> 觀光</span>
+            <span class="legend-item"><span style="color:#f472b6">●</span> 交通</span>
+          </div>
         </div>
         <div id="gmap"></div>
       `;
