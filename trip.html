@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-title" content="福岡旅遊">
   <meta name="theme-color" content="#0f1117">
   <link rel="manifest" href="manifest.json">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnEReNWAsG1X73hzSjSdnYjFfl_SxsACk&language=zh-TW"></script>
   <style>
     :root {
@@ -74,6 +76,120 @@
       margin-top: 6px;
       color: var(--muted);
       font-size: 0.86rem;
+    }
+
+    .top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swap-btn {
+      border: 1px solid #2f3650;
+      background: rgba(32, 38, 55, 0.55);
+      color: #d8deef;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .room-line {
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #c3cae2;
+      font-size: 0.84rem;
+    }
+
+    .copy-btn {
+      border: 1px solid #2f3650;
+      background: rgba(32, 38, 55, 0.55);
+      color: #e8edff;
+      border-radius: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 12px;
+      background: rgba(26, 29, 39, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      display: none;
+      z-index: 30;
+      backdrop-filter: blur(10px);
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    .room-screen {
+      min-height: calc(100vh - 120px);
+      display: grid;
+      place-items: center;
+      padding: 18px 10px 90px;
+    }
+
+    .room-card {
+      width: 100%;
+      max-width: 430px;
+      background: var(--card);
+      border: 1px solid #2b3144;
+      border-radius: 18px;
+      padding: 16px 14px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.5);
+    }
+
+    .room-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+
+    .room-sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .room-actions {
+      margin-top: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .room-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .room-error {
+      margin-top: 10px;
+      color: #fca5a5;
+      font-size: 0.86rem;
+      display: none;
     }
 
     .day-tabs-wrap {
@@ -376,7 +492,7 @@
       overflow: hidden;
       max-height: 0;
       opacity: 0;
-      transition: max-height 0.24s ease, opacity 0.24s ease, margin-top 0.24s ease;
+      transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
       margin-top: 0;
     }
 
@@ -392,6 +508,19 @@
       color: #b3b9cd;
       font-size: 0.78rem;
       line-height: 1.55;
+    }
+
+    .besttime {
+      margin-top: 8px;
+      color: #fbbf24;
+      font-size: 0.82rem;
+      font-weight: 650;
+    }
+
+    .recommend {
+      margin-top: 8px;
+      color: #aeb6cf;
+      font-size: 0.78rem;
     }
 
     .note-display {
@@ -431,6 +560,30 @@
       padding-left: 10px;
       color: #bac1d9;
       font-size: 0.8rem;
+    }
+
+    .transport-detail {
+      margin-top: 4px;
+      color: #6b7280;
+      font-size: 12px;
+      padding-left: 2px;
+    }
+
+    .transport.overnight {
+      background: #92400e;
+      color: #fbbf24;
+      border-left: 3px solid #fbbf24;
+      padding: 10px 10px 10px 12px;
+      border-radius: 12px;
+    }
+
+    .transport.overnight .route-chip {
+      border-color: rgba(251, 191, 36, 0.65);
+      color: #fff6cf;
+    }
+
+    .transport.overnight .transport-detail {
+      color: #fde68a;
     }
 
     .transport-main {
@@ -701,8 +854,20 @@
 <body>
   <main class="app">
     <header class="header">
-      <h1 class="trip-title" id="tripTitle"></h1>
-      <div class="trip-meta" id="tripMeta"></div>
+      <div class="toast" id="toast">已複製！</div>
+      <div class="top-row">
+        <div>
+          <h1 class="trip-title" id="tripTitle"></h1>
+          <div class="trip-meta" id="tripMeta"></div>
+          <div class="room-line" id="roomLine" style="display:none">
+            <span id="roomText"></span>
+            <button class="copy-btn" type="button" id="copyRoomBtn" title="複製行程碼">📋</button>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="swap-btn" type="button" id="swapRoomBtn" style="display:none">🔄 換行程</button>
+        </div>
+      </div>
 
       <div class="day-tabs-wrap">
         <div class="day-tabs" id="dayTabs"></div>
@@ -763,6 +928,10 @@
             <option value="3小時以上">3小時以上</option>
           </select>
         </div>
+        <div class="field">
+          <label for="f_bestTime">最佳前往時間</label>
+          <input id="f_bestTime" name="bestTime" type="text" placeholder="如「平日早上 9 點前人少」" />
+        </div>
 
         <div class="modal-actions">
           <button class="btn btn-primary" type="submit" id="spotSaveBtn">儲存</button>
@@ -772,9 +941,80 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="transportModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="transportModalTitle">
+      <div class="modal-head">
+        <p class="modal-title" id="transportModalTitle">編輯交通段</p>
+        <button class="modal-close" type="button" id="transportModalClose" aria-label="Close">✕</button>
+      </div>
+      <form class="modal-form" id="transportForm">
+        <div class="field">
+          <label for="t_icon">交通方式圖示（icon）</label>
+          <input id="t_icon" name="icon" type="text" placeholder="如 🚶 🚇 🚌 🚕" />
+        </div>
+        <div class="field">
+          <label for="t_mode">交通方式名稱（mode）</label>
+          <input id="t_mode" name="mode" type="text" placeholder="如 步行 / 地鐵" />
+        </div>
+        <div class="field">
+          <label for="t_duration">所需時間（duration）</label>
+          <input id="t_duration" name="duration" type="text" placeholder="如 18分鐘" />
+        </div>
+        <div class="field">
+          <label for="t_cost">費用（cost）</label>
+          <input id="t_cost" name="cost" type="text" placeholder="如 ¥260/人 或 免費" />
+        </div>
+        <div class="field">
+          <label for="t_detail">路線說明（detail）</label>
+          <input id="t_detail" name="detail" type="text" placeholder="如「地鐵空港線，2站」" />
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:10px;align-items:center;margin:0">
+            <input id="t_overnight" name="isOvernightTrain" type="checkbox" style="width:auto" />
+            是否為跨日/新幹線（isOvernightTrain）
+          </label>
+        </div>
+
+        <div class="modal-actions" style="grid-template-columns: 1fr;">
+          <button class="btn btn-primary" type="submit">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     const STORAGE_KEY = "tripPlanner_fukuoka_v1";
     const DATA_VERSION = 3;
+    const roomId = new URLSearchParams(location.search).get("room");
+
+    // Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCCrVQAJ_bJ6yewTcGeruSXi69v2qmwSAU",
+      authDomain: "trip-planner-9d168.firebaseapp.com",
+      databaseURL:
+        "https://trip-planner-9d168-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "trip-planner-9d168",
+      storageBucket: "trip-planner-9d168.firebasestorage.app",
+      messagingSenderId: "118385380183",
+      appId: "1:118385380183:web:203a6d9225517bb566cc12"
+    };
+
+    let db = null;
+    try {
+      if (window.firebase && firebase?.apps?.length === 0) {
+        firebase.initializeApp(firebaseConfig);
+      } else if (window.firebase && firebase?.apps?.length > 0) {
+        // already initialized
+      } else if (window.firebase) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      db = window.firebase ? firebase.database() : null;
+    } catch (e) {
+      db = null;
+    }
+
+    let latestRemoteState = null;
+    let remoteApplyScheduled = false;
 
     const defaultData = {
       dataVersion: DATA_VERSION,
@@ -834,6 +1074,8 @@
           {
             id: "t1",
             main: { icon: "🚶", mode: "步行", duration: "15分鐘", cost: "免費" },
+            detail: "步行，沿大濠公園湖畔步道",
+            isOvernightTrain: false,
             alternatives: [
               { icon: "🚕", mode: "計程車", duration: "10分鐘", cost: "¥800" },
               { icon: "🚌", mode: "巴士", duration: "20分鐘", cost: "¥150/人" }
@@ -842,6 +1084,8 @@
           {
             id: "t2",
             main: { icon: "🚇", mode: "地鐵", duration: "18分鐘", cost: "¥260/人" },
+            detail: "地鐵空港線，天神站搭乘，2站",
+            isOvernightTrain: true,
             alternatives: [
               { icon: "🚶", mode: "步行", duration: "25分鐘", cost: "免費" },
               { icon: "🚕", mode: "計程車", duration: "8分鐘", cost: "¥600" }
@@ -860,6 +1104,7 @@
     let draggingId = null;
     let reorderDirty = false;
     let modalCtx = { day: 1, itemId: null };
+    let transportModalCtx = { day: 1, index: 0 };
 
     let gmap = null;
     let gMarkers = [];
@@ -910,8 +1155,35 @@
       }
     }
 
+    function isAnyModalOpen() {
+      return (
+        document.getElementById("spotModal")?.classList.contains("show") ||
+        document.getElementById("transportModal")?.classList.contains("show")
+      );
+    }
+
+    function scheduleApplyRemote() {
+      if (remoteApplyScheduled) return;
+      remoteApplyScheduled = true;
+      const tick = () => {
+        remoteApplyScheduled = false;
+        if (!latestRemoteState) return;
+        if (isAnyModalOpen()) {
+          setTimeout(tick, 400);
+          return;
+        }
+        state = latestRemoteState;
+        latestRemoteState = null;
+        render();
+      };
+      setTimeout(tick, 0);
+    }
+
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      if (db && roomId) {
+        db.ref("rooms/" + roomId).set(state);
+      }
     }
 
     function dayItems(day) {
@@ -966,6 +1238,7 @@
       document.getElementById("f_category").value = item?.type || "觀光";
       document.getElementById("f_cost").value = item?.cost || "";
       document.getElementById("f_duration").value = item?.stay || "45分";
+      document.getElementById("f_bestTime").value = item?.bestTime || "";
 
       overlay.classList.add("show");
       overlay.setAttribute("aria-hidden", "false");
@@ -1011,16 +1284,115 @@
       });
     }
 
+    function showToast(text = "已複製！") {
+      const el = document.getElementById("toast");
+      el.textContent = text;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 900);
+    }
+
+    function setRoomHeaderUI() {
+      const line = document.getElementById("roomLine");
+      const swapBtn = document.getElementById("swapRoomBtn");
+      const reorderBtn = document.getElementById("reorderBtn");
+      const dayTabs = document.querySelector(".day-tabs-wrap");
+      const subtabs = document.querySelector(".subtabs");
+
+      if (roomId) {
+        line.style.display = "flex";
+        swapBtn.style.display = "inline-flex";
+        document.getElementById("roomText").textContent = `行程碼：${roomId}`;
+        if (reorderBtn) reorderBtn.style.display = "";
+        if (dayTabs) dayTabs.style.display = "";
+        if (subtabs) subtabs.style.display = "";
+      } else {
+        line.style.display = "none";
+        swapBtn.style.display = "none";
+        if (reorderBtn) reorderBtn.style.display = "none";
+        if (dayTabs) dayTabs.style.display = "none";
+        if (subtabs) subtabs.style.display = "none";
+      }
+    }
+
+    function renderRoomScreen(errorText = "") {
+      setRoomHeaderUI();
+      document.getElementById("tripTitle").textContent = "🌸 旅遊行程規劃";
+      document.getElementById("tripMeta").textContent = "建立新行程，或輸入行程碼加入已有的行程";
+
+      const content = document.getElementById("content");
+      content.innerHTML = `
+        <div class="room-screen">
+          <div class="room-card">
+            <h2 class="room-title">🌸 旅遊行程規劃</h2>
+            <div class="room-sub">建立新行程，或輸入行程碼加入已有的行程</div>
+            <div class="room-actions">
+              <button class="btn btn-primary" type="button" id="createRoomBtn">＋ 建立新行程</button>
+              <div class="room-row">
+                <input id="roomInput" class="inline-input" style="width:100%;max-width:none;min-width:0" placeholder="輸入行程碼（如 FUK2026）" />
+                <button class="btn" type="button" id="joinRoomBtn" style="background:#242b3f;color:#e8edff;border:1px solid #424c6c">加入</button>
+              </div>
+              <div class="room-error" id="roomError"></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const errEl = document.getElementById("roomError");
+      if (errorText) {
+        errEl.style.display = "block";
+        errEl.textContent = errorText;
+      }
+
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+      const nums = "0123456789";
+      const genCode = () => {
+        let code = "";
+        for (let i = 0; i < 3; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        for (let i = 0; i < 4; i++) code += nums[Math.floor(Math.random() * nums.length)];
+        return code;
+      };
+
+      document.getElementById("createRoomBtn").addEventListener("click", async () => {
+        const newId = genCode();
+        if (!db) {
+          errEl.style.display = "block";
+          errEl.textContent = "Firebase 初始化失敗，請確認網路或設定。";
+          return;
+        }
+        await db.ref("rooms/" + newId).set(defaultData);
+        location.search = `?room=${encodeURIComponent(newId)}`;
+      });
+
+      document.getElementById("joinRoomBtn").addEventListener("click", async () => {
+        const input = (document.getElementById("roomInput").value || "").trim().toUpperCase();
+        if (!input) return;
+        if (!db) {
+          errEl.style.display = "block";
+          errEl.textContent = "Firebase 初始化失敗，請確認網路或設定。";
+          return;
+        }
+        const snap = await db.ref("rooms/" + input).once("value");
+        if (!snap.exists()) {
+          errEl.style.display = "block";
+          errEl.textContent = "找不到此行程碼，請確認後再試";
+          return;
+        }
+        location.search = `?room=${encodeURIComponent(input)}`;
+      });
+    }
+
     function createTransportNode(transport, index) {
       const m = transport.main || {};
       const icon = m.icon ?? m.emoji ?? "";
       const mode = m.mode ?? m.type ?? "";
       const duration = m.duration ?? m.time ?? "";
       const cost = m.cost ?? m.fee ?? "";
-      const mainLine = `${icon} ${mode} ${duration} ${cost}`.replace(/\s+/g, " ").trim();
+      const isOvernightTrain = !!transport.isOvernightTrain;
+      const prefix = isOvernightTrain ? "⚠ 跨日交通 " : "";
+      const mainLine = `${prefix}${icon} ${mode} ${duration} ${cost}`.replace(/\s+/g, " ").trim();
 
       const wrapper = document.createElement("div");
-      wrapper.className = "transport";
+      wrapper.className = `transport${isOvernightTrain ? " overnight" : ""}`;
 
       const mainRow = document.createElement("div");
       mainRow.className = "transport-main";
@@ -1028,8 +1400,18 @@
         <div class="transport-left">
           <span class="transport-line">${mainLine}</span>
         </div>
-        <button class="route-chip" type="button">替代路線</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="route-chip" type="button">替代路線</button>
+          <button class="edit-btn" type="button" title="編輯">✎</button>
+        </div>
       `;
+
+      let detailEl = null;
+      if (transport.detail) {
+        detailEl = document.createElement("div");
+        detailEl.className = "transport-detail";
+        detailEl.textContent = transport.detail;
+      }
 
       const alt = document.createElement("div");
       alt.className = "alt-routes";
@@ -1063,9 +1445,41 @@
         alt.classList.toggle("open");
       });
 
-      wrapper.append(mainRow, alt);
+      mainRow.querySelector(".edit-btn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        openTransportModal(state.activeDay, index);
+      });
+
+      wrapper.append(mainRow);
+      if (detailEl) wrapper.append(detailEl);
+      wrapper.append(alt);
       wrapper.dataset.transportIndex = String(index);
       return wrapper;
+    }
+
+    function openTransportModal(day, index) {
+      transportModalCtx = { day, index };
+      const seg = dayTransports(day)[index];
+      if (!seg) return;
+      const m = seg.main || {};
+
+      document.getElementById("t_icon").value = m.icon || "";
+      document.getElementById("t_mode").value = m.mode || "";
+      document.getElementById("t_duration").value = m.duration || "";
+      document.getElementById("t_cost").value = m.cost || "";
+      document.getElementById("t_detail").value = seg.detail || "";
+      document.getElementById("t_overnight").checked = !!seg.isOvernightTrain;
+
+      const overlay = document.getElementById("transportModal");
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden", "false");
+      document.getElementById("t_icon").focus();
+    }
+
+    function closeTransportModal() {
+      const overlay = document.getElementById("transportModal");
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden", "true");
     }
 
     function formatCurrency(num) {
@@ -1079,6 +1493,14 @@
       const matched = value.replace(/,/g, "").match(/¥\s*([\d.]+)/);
       if (!matched) return 0;
       return Number(matched[1]) || 0;
+    }
+
+    function getRecommendation(item) {
+      const t = item?.type;
+      if (t === "餐飲") return "避開尖峰時段，先確認排隊狀況。";
+      if (t === "購物") return "可先列清單，再集中採買與退稅。";
+      if (t === "交通") return "留意末班車／轉乘時間。";
+      return "光線好的時段拍照更漂亮。";
     }
 
     function makeEditable(el, day, itemId, field) {
@@ -1207,6 +1629,8 @@
           <div class="detail-inner">
             詳細：可記錄集合時間、注意事項、雨天備案等。<br />
             提示：點擊「停留時間 / 費用」可直接編輯。
+            ${item.bestTime ? `<div class="besttime">⏰ 最佳時段：${item.bestTime}</div>` : ""}
+            <div class="recommend">⭐ 推薦：${getRecommendation(item)}</div>
             <div class="note-display ${item.note ? "" : "placeholder"}" data-note="1">${item.note ? item.note : "點擊新增備註…"}</div>
           </div>
         </div>
@@ -1234,7 +1658,13 @@
         e.stopPropagation();
         const target = dayItems(day).find((i) => i.id === item.id);
         if (!target) return;
-        target.expanded = !target.expanded;
+        const next = !target.expanded;
+        if (next) {
+          dayItems(day).forEach((i) => {
+            if (i.id !== target.id) i.expanded = false;
+          });
+        }
+        target.expanded = next;
         saveState();
         render();
       });
@@ -1465,6 +1895,11 @@
     }
 
     function render() {
+      if (!roomId) {
+        renderRoomScreen();
+        return;
+      }
+      setRoomHeaderUI();
       renderHeader();
       if (state.activeView === "itinerary") {
         renderItinerary();
@@ -1509,7 +1944,8 @@
         subtitle: document.getElementById("f_subtitle").value.trim(),
         type: document.getElementById("f_category").value,
         cost: document.getElementById("f_cost").value.trim(),
-        stay: document.getElementById("f_duration").value
+        stay: document.getElementById("f_duration").value,
+        bestTime: document.getElementById("f_bestTime").value.trim()
       };
 
       if (!payload.title) payload.title = "未命名景點";
@@ -1526,6 +1962,7 @@
           item.type = payload.type;
           item.cost = payload.cost;
           item.stay = payload.stay;
+          item.bestTime = payload.bestTime;
         }
       } else {
         list.push({
@@ -1538,7 +1975,8 @@
           cost: payload.cost,
           done: false,
           expanded: false,
-          note: ""
+          note: "",
+          bestTime: payload.bestTime
         });
       }
 
@@ -1566,6 +2004,73 @@
       closeSpotModal();
       render();
     });
+
+    // Transport modal wiring
+    document.getElementById("transportModal").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) closeTransportModal();
+    });
+    document.getElementById("transportModalClose").addEventListener("click", closeTransportModal);
+    document.getElementById("transportForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const day = transportModalCtx.day;
+      const idx = transportModalCtx.index;
+      const seg = dayTransports(day)[idx];
+      if (!seg) return;
+
+      seg.main = {
+        icon: document.getElementById("t_icon").value.trim(),
+        mode: document.getElementById("t_mode").value.trim(),
+        duration: document.getElementById("t_duration").value.trim(),
+        cost: document.getElementById("t_cost").value.trim()
+      };
+      seg.detail = document.getElementById("t_detail").value.trim();
+      seg.isOvernightTrain = !!document.getElementById("t_overnight").checked;
+
+      saveState();
+      closeTransportModal();
+      render();
+    });
+
+    document.getElementById("copyRoomBtn").addEventListener("click", async () => {
+      if (!roomId) return;
+      try {
+        await navigator.clipboard.writeText(roomId);
+        showToast("已複製！");
+      } catch (e) {
+        showToast("複製失敗");
+      }
+    });
+
+    document.getElementById("swapRoomBtn").addEventListener("click", () => {
+      const url = new URL(location.href);
+      url.searchParams.delete("room");
+      history.pushState({}, "", url.toString());
+      location.reload();
+    });
+
+    function startRoomSync() {
+      if (!db || !roomId) return;
+      db.ref("rooms/" + roomId).on("value", (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          // Keep offline fallback in localStorage
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          latestRemoteState = data;
+          scheduleApplyRemote();
+        }
+      });
+    }
+
+    // bootstrap: offline fallback first, then realtime sync
+    if (roomId) {
+      const localRaw = localStorage.getItem(STORAGE_KEY);
+      if (localRaw) {
+        try {
+          state = JSON.parse(localRaw);
+        } catch {}
+      }
+      startRoomSync();
+    }
 
     render();
   </script>
