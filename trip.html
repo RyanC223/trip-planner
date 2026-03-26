@@ -1705,6 +1705,10 @@
           s.itineraryByDay[key] = toArr(s.itineraryByDay[key]);
         }
       }
+
+      if (!s.transportByDay) {
+        s.transportByDay = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+      }
       if (s.transportByDay) {
         for (const key of Object.keys(s.transportByDay)) {
           const seg = s.transportByDay[key];
@@ -1755,7 +1759,7 @@
     }
 
     function dayTransports(day) {
-      return state.transportByDay[day] || [];
+      return (state.transportByDay || {})[day] || [];
     }
 
     function swapArrayItems(arr, a, b) {
