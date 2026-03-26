@@ -135,6 +135,14 @@
         display: none !important;
       }
 
+      /* Ensure itinerary contents are printable */
+      #content,
+      .itinerary-item,
+      .card,
+      .transport {
+        display: block !important;
+      }
+
       .content {
         padding-bottom: 16px !important;
       }
@@ -175,9 +183,10 @@
         max-height: none !important;
       }
 
+      /* Do not force day-per-page. Natural pagination only. */
       .ov-day + .ov-day {
-        break-before: page;
-        page-break-before: always;
+        break-before: auto !important;
+        page-break-before: auto !important;
       }
     }
 
@@ -259,6 +268,130 @@
 
     .toast.show {
       display: block;
+    }
+
+    .net-banner {
+      margin-top: 10px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      display: none;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      backdrop-filter: blur(10px);
+    }
+
+    .net-banner.show {
+      display: inline-block;
+    }
+
+    .net-banner.offline {
+      background: rgba(146, 64, 14, 0.85);
+      color: #fbbf24;
+    }
+
+    .net-banner.online {
+      background: rgba(34, 197, 94, 0.22);
+      color: #4ade80;
+    }
+
+    .progress-row {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .progress-bar {
+      height: 3px;
+      flex: 1;
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar > div {
+      height: 100%;
+      width: 0%;
+      background: #4ade80;
+      transition: width 0.25s ease;
+    }
+
+    .progress-text {
+      font-size: 0.78rem;
+      color: #aab2cc;
+      white-space: nowrap;
+    }
+
+    .reorder-hint {
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      display: none;
+    }
+
+    .reorder-hint.show {
+      display: block;
+    }
+
+    .addr-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid #424c6c;
+      background: #242b3f;
+      color: #dce2f6;
+      cursor: pointer;
+      display: inline-grid;
+      place-items: center;
+      font-size: 0.86rem;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .card.reorder .complete-btn,
+    .card.reorder .edit-btn,
+    .card.reorder .expand-btn {
+      display: none !important;
+    }
+
+    .map-legend {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      z-index: 5;
+      background: rgba(17, 21, 34, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 14px;
+      padding: 10px 10px;
+      color: #e8edff;
+      font-size: 0.78rem;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      backdrop-filter: blur(10px);
+      transform-origin: left bottom;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .map-legend.pulse {
+      transform: scale(1.06);
+      border-color: rgba(124, 140, 255, 0.7);
+      box-shadow: 0 0 0 3px rgba(124, 140, 255, 0.25);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #94a3b8;
     }
 
     .room-screen {
@@ -1092,6 +1225,7 @@
   <main class="app">
     <header class="header">
       <div class="toast" id="toast">已複製！</div>
+      <div class="net-banner no-print" id="netBanner"></div>
       <div class="top-row">
         <div>
           <div class="trip-title-row">
@@ -1099,6 +1233,11 @@
             <button class="title-edit-btn no-print" type="button" id="editTripTitleBtn" title="編輯旅程名稱">✎</button>
           </div>
           <div class="trip-meta" id="tripMeta"></div>
+          <div class="progress-row" id="progressRow" style="display:none">
+            <div class="progress-bar"><div id="progressFill"></div></div>
+            <div class="progress-text" id="progressText"></div>
+          </div>
+          <div class="reorder-hint no-print" id="reorderHint">排序模式：點 ▲▼ 調整景點順序</div>
           <div class="room-line" id="roomLine" style="display:none">
             <span id="roomText"></span>
             <button class="copy-btn no-print" type="button" id="copyRoomBtn" title="複製行程碼">📋</button>
@@ -1618,6 +1757,25 @@
       document.getElementById("tripTitle").textContent = state.tripName;
       document.getElementById("tripMeta").textContent = `${state.days} 天行程  ·  ${state.people} 人`;
 
+      // progress
+      const allItems = Object.values(state.itineraryByDay || {}).flat();
+      const total = allItems.length;
+      const done = allItems.filter((i) => i && i.done).length;
+      const row = document.getElementById("progressRow");
+      const fill = document.getElementById("progressFill");
+      const txt = document.getElementById("progressText");
+      if (row && fill && txt && roomId) {
+        row.style.display = total ? "flex" : "none";
+        const pct = total ? Math.round((done / total) * 100) : 0;
+        fill.style.width = `${pct}%`;
+        txt.textContent = `已完成 ${done} / ${total} 個景點`;
+      } else if (row) {
+        row.style.display = "none";
+      }
+
+      const hint = document.getElementById("reorderHint");
+      if (hint) hint.classList.toggle("show", !!state.reorderMode && state.activeDay > 0);
+
       const dayTabsEl = document.getElementById("dayTabs");
       dayTabsEl.innerHTML = "";
 
@@ -1868,8 +2026,8 @@
           <span class="transport-line">${mainLine}</span>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-          <button class="route-chip" type="button">替代路線</button>
-          <button class="edit-btn" type="button" title="編輯">✎</button>
+          <button class="route-chip no-print" type="button">替代路線</button>
+          <button class="edit-btn no-print" type="button" title="編輯">✎</button>
         </div>
       `;
 
@@ -2079,13 +2237,13 @@
           </div>
           <div class="time">${item.time}</div>
           <div>
-            <h3 class="place-title">${item.title}</h3>
+            <h3 class="place-title">${item.title}${item.expanded ? ` <button class="addr-btn no-print" type="button" title="複製地址">📍</button>` : ""}</h3>
             <div class="subtitle">${item.subtitle}</div>
           </div>
           <div class="head-actions">
-            <button class="complete-btn ${doneClass}" title="完成">✓</button>
-            <button class="edit-btn" title="編輯" type="button">✎</button>
-            <button class="expand-btn ${expandClass}" title="展開">⌄</button>
+            <button class="complete-btn ${doneClass} no-print" title="完成">✓</button>
+            <button class="edit-btn no-print" title="編輯" type="button">✎</button>
+            <button class="expand-btn no-print ${expandClass}" title="展開">⌄</button>
           </div>
         </div>
         <div class="tag-row">
@@ -2110,6 +2268,7 @@
       const stayEl = card.querySelector('[data-edit="stay"]');
       const costEl = card.querySelector('[data-edit="cost"]');
       const noteEl = card.querySelector('[data-note="1"]');
+      const addrBtn = card.querySelector(".addr-btn");
       const upBtn = card.querySelector('[data-move="up"]');
       const downBtn = card.querySelector('[data-move="down"]');
 
@@ -2145,6 +2304,19 @@
       makeEditable(stayEl, day, item.id, "stay");
       makeEditable(costEl, day, item.id, "cost");
       makeNoteEditable(day, item.id, noteEl);
+
+      if (addrBtn) {
+        addrBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const text = `${item.title}${item.subtitle ? " " + item.subtitle : ""}`.trim();
+          try {
+            await navigator.clipboard.writeText(text);
+            showToast("已複製！");
+          } catch (err) {
+            showToast("複製失敗");
+          }
+        });
+      }
 
       if (upBtn) {
         upBtn.addEventListener("click", (e) => {
@@ -2348,6 +2520,12 @@
           <button class="map-type-btn active" type="button" data-maptype="roadmap">地圖</button>
           <button class="map-type-btn" type="button" data-maptype="satellite">衛星</button>
         </div>
+        <div class="map-legend" id="mapLegend">
+          <span class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>餐飲</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#60a5fa"></span>購物</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#fb923c"></span>觀光</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#f472b6"></span>交通</span>
+        </div>
         <div id="gmap"></div>
       `;
       content.appendChild(shell);
@@ -2362,6 +2540,17 @@
       });
 
       updateMapMarkersForDay(state.activeDay);
+
+      // Legend first-time highlight
+      const seenKey = "tripPlanner_seenMapLegend_v1";
+      if (!localStorage.getItem(seenKey)) {
+        const legend = document.getElementById("mapLegend");
+        if (legend) {
+          legend.classList.add("pulse");
+          setTimeout(() => legend.classList.remove("pulse"), 2000);
+          localStorage.setItem(seenKey, "1");
+        }
+      }
     }
 
     function render() {
@@ -2599,6 +2788,33 @@
       render();
     });
 
+    // online/offline banner
+    let netTimer = null;
+    function setNetBanner(kind, text, autoHideMs = 0) {
+      const el = document.getElementById("netBanner");
+      if (!el) return;
+      el.classList.remove("offline", "online");
+      el.classList.add("show");
+      el.classList.add(kind);
+      el.textContent = text;
+      if (netTimer) clearTimeout(netTimer);
+      if (autoHideMs) {
+        netTimer = setTimeout(() => {
+          el.classList.remove("show");
+        }, autoHideMs);
+      }
+    }
+
+    window.addEventListener("offline", () => {
+      setNetBanner("offline", "📵 目前離線，顯示本機快取資料");
+    });
+    window.addEventListener("online", () => {
+      setNetBanner("online", "✅ 已重新連線", 2000);
+    });
+    if (navigator && navigator.onLine === false) {
+      setNetBanner("offline", "📵 目前離線，顯示本機快取資料");
+    }
+
     function beginEditTripTitle() {
       const titleEl = document.getElementById("tripTitle");
       const current = state.tripName || "";
@@ -2636,13 +2852,101 @@
 
     document.getElementById("exportBtn").addEventListener("click", () => {
       if (!roomId) return;
-      // Ensure printable view: not map; keep overview or current day itinerary
-      if (state.activeView !== "itinerary") {
-        state.activeView = "itinerary";
+      const content = document.getElementById("content");
+      const prev = {
+        html: content.innerHTML,
+        activeDay: state.activeDay,
+        activeView: state.activeView,
+        reorderMode: state.reorderMode
+      };
+
+      // Build print-only itinerary: only days with spots
+      const start = state.startDate ? state.startDate : "";
+      const headerHtml = `
+        <div style="margin: 8px 0 14px;">
+          <div style="font-size:18px;font-weight:800;margin-bottom:6px;">${state.tripName}</div>
+          <div style="font-size:13px;color:#111;">${state.days} 天行程 · ${state.people} 人</div>
+          <div style="font-size:13px;color:#111;">出發日期：${start || "未設定"}</div>
+          <div style="font-size:13px;color:#111;">行程碼：${roomId}</div>
+        </div>
+      `;
+
+      let html = headerHtml;
+      for (let d = 1; d <= state.days; d += 1) {
+        const items = state.itineraryByDay?.[d] || [];
+        if (!items.length) continue; // do not print empty day
+        const dayDate = (state.startDate ? (() => {
+          const base = new Date(state.startDate + "T00:00:00");
+          base.setDate(base.getDate() + (d - 1));
+          return `${base.getMonth() + 1}/${base.getDate()}`;
+        })() : "");
+        const weekday = (() => {
+          const base = state.startDate ? new Date(state.startDate + "T00:00:00") : new Date();
+          base.setHours(0,0,0,0);
+          base.setDate(base.getDate() + (d - 1));
+          const w = ["日","一","二","三","四","五","六"][base.getDay()];
+          return `星期${w}`;
+        })();
+        const title = state.startDate ? `第${d}天 · ${dayDate} ${weekday}` : `第${d}天 · ${weekday}`;
+
+        html += `<div style="margin-top:14px;margin-bottom:10px;font-size:15px;font-weight:800;">${title}</div>`;
+
+        items.forEach((item, idx) => {
+          const note = item.note ? item.note.replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
+          const best = item.bestTime ? item.bestTime.replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
+          html += `
+            <div class="card" style="margin:10px 0;">
+              <div style="display:flex;justify-content:space-between;gap:10px;">
+                <div style="min-width:52px;font-variant-numeric:tabular-nums;">${item.time || ""}</div>
+                <div style="flex:1;">
+                  <div style="font-size:16px;font-weight:800;">${item.title || ""}</div>
+                  <div style="font-size:12px;color:#333;">${item.subtitle || ""}</div>
+                </div>
+              </div>
+              <div style="margin-top:8px;font-size:12px;color:#111;">
+                <span style="display:inline-block;border:1px solid #ccc;border-radius:999px;padding:2px 8px;margin-right:6px;">${item.type || ""}</span>
+                <span style="margin-right:8px;">停留：${item.stay || ""}</span>
+                <span>費用：${item.cost || ""}</span>
+              </div>
+              <div class="detail open" style="max-height:none;opacity:1;margin-top:10px;">
+                <div class="detail-inner" style="border-top:1px solid #ddd;padding-top:8px;color:#111;">
+                  ${best ? `<div style="margin-top:4px;"><span style="font-weight:700;">最佳時段：</span>${best}</div>` : ""}
+                  ${note ? `<div style="margin-top:6px;white-space:pre-wrap;"><span style="font-weight:700;">備註：</span>${note}</div>` : ""}
+                </div>
+              </div>
+            </div>
+          `;
+
+          const seg = (state.transportByDay?.[d] || [])[idx];
+          if (idx < items.length - 1 && seg) {
+            const m = seg.main || {};
+            html += `
+              <div class="transport" style="margin:8px 6px;padding-left:10px;">
+                <div style="display:flex;gap:8px;align-items:center;color:#111;">
+                  <div style="font-variant-numeric:tabular-nums;">${m.icon || ""} ${m.mode || ""} ${m.duration || ""} ${m.cost || ""}</div>
+                </div>
+                ${seg.detail ? `<div class="transport-detail" style="margin-top:4px;font-size:12px;color:#6b7280;">${seg.detail}</div>` : ""}
+              </div>
+            `;
+          }
+        });
+
+        const totalPerPerson = items.reduce((sum, i) => sum + (typeof i.cost === "string" && i.cost.includes("¥") ? (Number((i.cost.replace(/,/g,"").match(/¥\s*([\d.]+)/)||[])[1])||0) : 0), 0);
+        html += `<div class="day-total" style="margin:12px 4px 0;padding-top:10px;border-top:1px solid #ddd;text-align:right;color:#111;">當日費用小計 ¥${totalPerPerson.toLocaleString("en-US")}／人</div>`;
       }
-      state.reorderMode = false;
-      saveState();
-      render();
+
+      // Switch to a print-only view (do not mutate state / no saveState)
+      content.innerHTML = html;
+      window.scrollTo(0, 0);
+
+      const restore = () => {
+        content.innerHTML = prev.html;
+        state.activeDay = prev.activeDay;
+        state.activeView = prev.activeView;
+        state.reorderMode = prev.reorderMode;
+        render();
+      };
+      window.addEventListener("afterprint", restore, { once: true });
       setTimeout(() => window.print(), 0);
     });
 
