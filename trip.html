@@ -1217,6 +1217,83 @@
       border: 1px solid rgba(239, 68, 68, 0.55);
       color: #ffd2d2;
     }
+
+    .geo-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .geo-btn {
+      border: 1px solid #424c6c;
+      background: #242b3f;
+      color: #e8edff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.86rem;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .geo-status {
+      margin-top: 8px;
+      font-size: 0.84rem;
+      color: #9aa4c0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .geo-status.good {
+      color: #4ade80;
+      font-weight: 650;
+    }
+
+    .geo-small-btn {
+      border: 1px solid #2f3650;
+      background: rgba(32, 38, 55, 0.55);
+      color: #d8deef;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.76rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .geo-results {
+      margin-top: 10px;
+      border: 1px solid #2b3144;
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .geo-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .geo-item:first-child {
+      border-top: 0;
+    }
+
+    .geo-item-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #f2f5ff;
+      line-height: 1.25;
+    }
+
+    .geo-item-sub {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: #9aa4c0;
+      line-height: 1.35;
+    }
   </style>
 </head>
 <body>
@@ -1277,6 +1354,11 @@
         <div class="field">
           <label for="f_name">地點名稱（name）</label>
           <input id="f_name" name="name" type="text" placeholder="如 大濠公園" />
+          <div class="geo-actions no-print">
+            <button class="geo-btn" type="button" id="geoSearchBtn">🔍 搜尋地圖位置</button>
+          </div>
+          <div class="geo-status" id="geoStatus" style="display:none"></div>
+          <div class="geo-results" id="geoResults" style="display:none"></div>
         </div>
         <div class="field">
           <label for="f_subtitle">副標題（subtitle）</label>
@@ -1433,6 +1515,8 @@
             subtitle: "湖畔步道 / 親子散步",
             stay: "約 60 分鐘",
             cost: "免費",
+            lat: 33.5841,
+            lng: 130.3686,
             done: false,
             expanded: false,
             note: "可先在公園拍照，推車友善。"
@@ -1445,6 +1529,8 @@
             subtitle: "福岡經典豚骨拉麵",
             stay: "約 45 分鐘",
             cost: "¥1,200/人",
+            lat: 33.5897,
+            lng: 130.4201,
             done: false,
             expanded: false,
             note: "可依口味客製濃淡與辣度。"
@@ -1457,6 +1543,8 @@
             subtitle: "伴手禮與藥妝採買",
             stay: "約 90 分鐘",
             cost: "自由購物",
+            lat: 33.5903,
+            lng: 130.3987,
             done: false,
             expanded: false,
             note: "建議先逛北區，再往南區移動。"
@@ -1505,7 +1593,7 @@
     let weatherCache = null;
     let weatherMeta = { hasStartDate: false, offsetDays: 0, startTooFar: false };
     let pendingScrollItemId = null;
-    let modalCtx = { day: 1, itemId: null };
+    let modalCtx = { day: 1, itemId: null, lat: null, lng: null };
     let transportModalCtx = { day: 1, index: 0 };
 
     let gmap = null;
@@ -1644,6 +1732,10 @@
       document.getElementById("f_duration").value = item?.stay || "45分";
       document.getElementById("f_bestTime").value = item?.bestTime || "";
 
+      modalCtx.lat = item?.lat ?? null;
+      modalCtx.lng = item?.lng ?? null;
+      renderGeoUI();
+
       overlay.classList.add("show");
       overlay.setAttribute("aria-hidden", "false");
       document.getElementById("f_time").focus();
@@ -1653,7 +1745,82 @@
       const overlay = document.getElementById("spotModal");
       overlay.classList.remove("show");
       overlay.setAttribute("aria-hidden", "true");
-      modalCtx = { day: state.activeDay, itemId: null };
+      modalCtx = { day: state.activeDay, itemId: null, lat: null, lng: null };
+    }
+
+    function renderGeoUI(message = "") {
+      const status = document.getElementById("geoStatus");
+      const results = document.getElementById("geoResults");
+      if (!status || !results) return;
+
+      const has = modalCtx.lat != null && modalCtx.lng != null;
+      if (has) {
+        status.style.display = "flex";
+        status.classList.add("good");
+        status.innerHTML = `<span>📍 已設定位置</span><button class="geo-small-btn" type="button" id="geoResearchBtn">重新搜尋</button>`;
+        document.getElementById("geoResearchBtn").addEventListener("click", () => {
+          status.classList.remove("good");
+          status.style.display = "none";
+          results.style.display = "none";
+          doGeoSearch();
+        });
+      } else if (message) {
+        status.style.display = "block";
+        status.classList.remove("good");
+        status.textContent = message;
+      } else {
+        status.style.display = "none";
+        status.classList.remove("good");
+        status.textContent = "";
+      }
+    }
+
+    function showGeoResults(items) {
+      const results = document.getElementById("geoResults");
+      const status = document.getElementById("geoStatus");
+      if (!results || !status) return;
+      results.innerHTML = "";
+
+      if (!items.length) {
+        results.style.display = "none";
+        renderGeoUI("搜尋失敗，請手動確認位置");
+        return;
+      }
+
+      items.forEach((r) => {
+        const div = document.createElement("div");
+        div.className = "geo-item";
+        const shortName = (r.formatted_address || "").split("、")[0].split(",")[0] || "結果";
+        div.innerHTML = `
+          <div class="geo-item-title">${shortName}</div>
+          <div class="geo-item-sub">${r.formatted_address || ""}</div>
+        `;
+        div.addEventListener("click", () => {
+          modalCtx.lat = r.geometry?.location?.lat ?? null;
+          modalCtx.lng = r.geometry?.location?.lng ?? null;
+          results.style.display = "none";
+          renderGeoUI("✅ 已設定位置");
+        });
+        results.appendChild(div);
+      });
+      results.style.display = "block";
+    }
+
+    function doGeoSearch() {
+      const name = (document.getElementById("f_name")?.value || "").trim();
+      if (!name) return;
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        name + " 日本"
+      )}&key=AIzaSyDnEReNWAsG1X73hzSjSdnYjFfl_SxsACk`;
+      fetch(url)
+        .then((r) => r.json())
+        .then((json) => {
+          const rs = (json.results || []).slice(0, 3);
+          showGeoResults(rs);
+        })
+        .catch(() => {
+          renderGeoUI("搜尋失敗，請手動確認位置");
+        });
     }
 
     function typeClass(type) {
@@ -2388,16 +2555,6 @@
       { featureType: "poi", elementType: "geometry", stylers: [{ color: "#283d6a" }] }
     ];
 
-    const PLACE_COORDS_BY_DAY = {
-      1: {
-        "大濠公園": { lat: 33.5841, lng: 130.3686 },
-        "大濠公園散步": { lat: 33.5841, lng: 130.3686 },
-        "一蘭拉麵本社總本店": { lat: 33.5897, lng: 130.4201 },
-        "一蘭拉麵 本社總本店": { lat: 33.5897, lng: 130.4201 },
-        "天神地下街": { lat: 33.5903, lng: 130.3987 }
-      }
-    };
-
     function mapPinColor(type) {
       if (type === "餐飲") return "#4ade80";
       if (type === "購物") return "#60a5fa";
@@ -2448,13 +2605,14 @@
       clearMapMarkers();
       if (gInfoWindow) gInfoWindow.close();
 
-      const coords = PLACE_COORDS_BY_DAY[day] || {};
       const items = dayItems(day);
       let bounds = new google.maps.LatLngBounds();
       let hasAny = false;
 
       items.forEach((item, idx) => {
-        const pos = coords[item.title];
+        if (item.lat == null || item.lng == null) return;
+        const pos = { lat: Number(item.lat), lng: Number(item.lng) };
+        if (!Number.isFinite(pos.lat) || !Number.isFinite(pos.lng)) return;
         if (!pos) return;
 
         const color = mapPinColor(item.type);
@@ -2648,6 +2806,9 @@
       if (e.target === e.currentTarget) closeSpotModal();
     });
     document.getElementById("spotModalClose").addEventListener("click", closeSpotModal);
+    document.getElementById("geoSearchBtn").addEventListener("click", () => {
+      doGeoSearch();
+    });
 
     document.getElementById("spotForm").addEventListener("submit", (e) => {
       e.preventDefault();
@@ -2661,7 +2822,9 @@
         type: document.getElementById("f_category").value,
         cost: document.getElementById("f_cost").value.trim(),
         stay: document.getElementById("f_duration").value,
-        bestTime: document.getElementById("f_bestTime").value.trim()
+        bestTime: document.getElementById("f_bestTime").value.trim(),
+        lat: modalCtx.lat,
+        lng: modalCtx.lng
       };
 
       if (!payload.title) payload.title = "未命名景點";
@@ -2679,6 +2842,8 @@
           item.cost = payload.cost;
           item.stay = payload.stay;
           item.bestTime = payload.bestTime;
+          item.lat = payload.lat;
+          item.lng = payload.lng;
         }
       } else {
         list.push({
@@ -2689,6 +2854,8 @@
           subtitle: payload.subtitle,
           stay: payload.stay,
           cost: payload.cost,
+          lat: payload.lat ?? null,
+          lng: payload.lng ?? null,
           done: false,
           expanded: false,
           note: "",
