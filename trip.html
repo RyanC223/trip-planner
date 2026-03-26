@@ -1691,6 +1691,40 @@
       );
     }
 
+    function normalizeFirebaseArrays(s) {
+      const toArr = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val;
+        return Object.keys(val)
+          .sort((a, b) => Number(a) - Number(b))
+          .map((k) => val[k]);
+      };
+
+      if (s.itineraryByDay) {
+        for (const key of Object.keys(s.itineraryByDay)) {
+          s.itineraryByDay[key] = toArr(s.itineraryByDay[key]);
+        }
+      }
+      if (s.transportByDay) {
+        for (const key of Object.keys(s.transportByDay)) {
+          const seg = s.transportByDay[key];
+          if (seg && !Array.isArray(seg)) {
+            s.transportByDay[key] = toArr(seg);
+          }
+          if (Array.isArray(s.transportByDay[key])) {
+            s.transportByDay[key] = s.transportByDay[key].map((t) => {
+              if (!t) return t;
+              if (t.alternatives && !Array.isArray(t.alternatives)) {
+                t.alternatives = toArr(t.alternatives);
+              }
+              return t;
+            });
+          }
+        }
+      }
+      return s;
+    }
+
     function scheduleApplyRemote() {
       if (remoteApplyScheduled) return;
       remoteApplyScheduled = true;
@@ -1701,7 +1735,7 @@
           setTimeout(tick, 400);
           return;
         }
-        state = latestRemoteState;
+        state = normalizeFirebaseArrays(latestRemoteState);
         latestRemoteState = null;
         render();
       };
@@ -2998,9 +3032,10 @@
       db.ref("rooms/" + roomId).on("value", (snapshot) => {
         const data = snapshot.val();
         if (data) {
+          const normalized = normalizeFirebaseArrays(data);
           // Keep offline fallback in localStorage
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-          latestRemoteState = data;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+          latestRemoteState = normalized;
           scheduleApplyRemote();
         }
       });
