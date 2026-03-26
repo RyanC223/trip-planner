@@ -1887,18 +1887,47 @@
     function doGeoSearch() {
       const name = (document.getElementById("f_name")?.value || "").trim();
       if (!name) return;
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-        name + " 日本"
-      )}&key=AIzaSyDnEReNWAsG1X73hzSjSdnYjFfl_SxsACk`;
-      fetch(url)
-        .then((r) => r.json())
-        .then((json) => {
-          const rs = (json.results || []).slice(0, 3);
-          showGeoResults(rs);
-        })
-        .catch(() => {
-          renderGeoUI("搜尋失敗，請手動確認位置");
-        });
+
+      renderGeoUI("🔍 搜尋中…");
+      document.getElementById("geoResults").style.display = "none";
+
+      if (!window.google?.maps?.Geocoder) {
+        renderGeoUI("搜尋失敗，請手動確認位置");
+        return;
+      }
+
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode(
+        { address: name + " 日本", region: "jp", language: "zh-TW" },
+        (results, status) => {
+          if (status !== "OK" || !results?.length) {
+            renderGeoUI("找不到結果，請換個名稱再試");
+            return;
+          }
+
+          const container = document.getElementById("geoResults");
+          container.innerHTML = "";
+          results.slice(0, 3).forEach((r) => {
+            const div = document.createElement("div");
+            div.className = "geo-item";
+            const shortName = (r.formatted_address || "").split("、")[0].split(",")[0] || "結果";
+            div.innerHTML = `
+          <div class="geo-item-title">${shortName}</div>
+          <div class="geo-item-sub">${r.formatted_address || ""}</div>
+        `;
+            div.addEventListener("click", () => {
+              const loc = r.geometry?.location;
+              modalCtx.lat = typeof loc?.lat === "function" ? loc.lat() : loc?.lat ?? null;
+              modalCtx.lng = typeof loc?.lng === "function" ? loc.lng() : loc?.lng ?? null;
+              container.style.display = "none";
+              renderGeoUI("✅ 已設定位置");
+            });
+            container.appendChild(div);
+          });
+          container.style.display = "block";
+          renderGeoUI("");
+        }
+      );
     }
 
     function typeClass(type) {
