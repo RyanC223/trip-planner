@@ -1621,45 +1621,49 @@
     }
 
     function migrateStateIfNeeded(state) {
-      console.log("目前 dataVersion:", state.dataVersion);
-      const prev = Number(state.dataVersion || 0);
+      try {
+        console.log("目前 dataVersion:", state.dataVersion);
+        const prev = Number(state.dataVersion || 0);
 
-      // v3 migration: normalize transport structure (legacy safety)
-      if (prev < 3) {
-        state.transportByDay = structuredClone(defaultData.transportByDay);
-      }
-
-      // v4 migration: add lat/lng for day1 spots
-      if (prev < 4) {
-        const coordFallback = {
-          "大濠公園散步": { lat: 33.5841, lng: 130.3686 },
-          "大濠公園": { lat: 33.5841, lng: 130.3686 },
-          "一蘭拉麵 本社總本店": { lat: 33.5897, lng: 130.4201 },
-          "一蘭拉麵本社總本店": { lat: 33.5897, lng: 130.4201 },
-          "天神地下街": { lat: 33.5903, lng: 130.3987 }
-        };
-
-        const day1 = state.itineraryByDay?.[1];
-        if (Array.isArray(day1)) {
-          day1.forEach((spot) => {
-            if (!spot) return;
-            const needLat = spot.lat == null;
-            const needLng = spot.lng == null;
-            if (!needLat && !needLng) return;
-            const fb = coordFallback[spot.title];
-            if (!fb) return;
-            if (needLat) spot.lat = fb.lat;
-            if (needLng) spot.lng = fb.lng;
-          });
+        // v3 migration: normalize transport structure (legacy safety)
+        if (prev < 3) {
+          state.transportByDay = structuredClone(defaultData.transportByDay);
         }
-      }
 
-      if (prev < DATA_VERSION) {
-        state.dataVersion = DATA_VERSION;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        if (db && roomId) {
-          db.ref("rooms/" + roomId).set(state);
+        // v4 migration: add lat/lng for day1 spots
+        if (prev < 4) {
+          const coordFallback = {
+            "大濠公園散步": { lat: 33.5841, lng: 130.3686 },
+            "大濠公園": { lat: 33.5841, lng: 130.3686 },
+            "一蘭拉麵 本社總本店": { lat: 33.5897, lng: 130.4201 },
+            "一蘭拉麵本社總本店": { lat: 33.5897, lng: 130.4201 },
+            "天神地下街": { lat: 33.5903, lng: 130.3987 }
+          };
+
+          const day1 = state.itineraryByDay?.[1];
+          if (Array.isArray(day1)) {
+            day1.forEach((spot) => {
+              if (!spot) return;
+              const needLat = spot.lat == null;
+              const needLng = spot.lng == null;
+              if (!needLat && !needLng) return;
+              const fb = coordFallback[spot.title];
+              if (!fb) return;
+              if (needLat) spot.lat = fb.lat;
+              if (needLng) spot.lng = fb.lng;
+            });
+          }
         }
+
+        if (prev < DATA_VERSION) {
+          state.dataVersion = DATA_VERSION;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          if (db && roomId) {
+            db.ref("rooms/" + roomId).set(state);
+          }
+        }
+      } catch (e) {
+        console.error("Migration error:", e);
       }
       return state;
     }
@@ -2539,44 +2543,53 @@
     }
 
     function renderItinerary() {
-      if (!state.activeDay) return;
-      const content = document.getElementById("content");
-      content.innerHTML = "";
-      const day = state.activeDay;
-      const items = dayItems(day);
-      const transports = dayTransports(day);
+      try {
+        if (!state.activeDay) return;
+        const content = document.getElementById("content");
+        content.innerHTML = "";
+        const day = state.activeDay;
+        const items = dayItems(day);
+        const transports = dayTransports(day);
 
-      if (!items.length) {
-        const empty = document.createElement("div");
-        empty.className = "day-empty";
-        empty.textContent = `第${day}天目前尚無行程`;
-        content.appendChild(empty);
-        return;
-      }
-
-      items.forEach((item, idx) => {
-        const block = document.createElement("div");
-        block.className = "itinerary-item";
-        block.appendChild(createCardNode(item, day));
-        content.appendChild(block);
-
-        if (idx < items.length - 1 && transports[idx]) {
-          content.appendChild(createTransportNode(transports[idx], idx));
+        if (!items.length) {
+          const empty = document.createElement("div");
+          empty.className = "day-empty";
+          empty.textContent = `第${day}天目前尚無行程`;
+          content.appendChild(empty);
+          return;
         }
-      });
 
-      const addBtn = document.createElement("button");
-      addBtn.className = "add-spot-btn";
-      addBtn.type = "button";
-      addBtn.textContent = "＋ 新增景點";
-      addBtn.addEventListener("click", () => openSpotModal(day, null));
-      content.appendChild(addBtn);
+        items.forEach((item, idx) => {
+          const block = document.createElement("div");
+          block.className = "itinerary-item";
+          block.appendChild(createCardNode(item, day));
+          content.appendChild(block);
 
-      const totalPerPerson = items.reduce((sum, i) => sum + parseYen(i.cost), 0);
-      const totalEl = document.createElement("div");
-      totalEl.className = "day-total";
-      totalEl.textContent = `今日費用小計 ${formatCurrency(totalPerPerson)}／人`;
-      content.appendChild(totalEl);
+          if (idx < items.length - 1 && transports[idx]) {
+            content.appendChild(createTransportNode(transports[idx], idx));
+          }
+        });
+
+        const addBtn = document.createElement("button");
+        addBtn.className = "add-spot-btn";
+        addBtn.type = "button";
+        addBtn.textContent = "＋ 新增景點";
+        addBtn.addEventListener("click", () => openSpotModal(day, null));
+        content.appendChild(addBtn);
+
+        const totalPerPerson = items.reduce((sum, i) => sum + parseYen(i.cost), 0);
+        const totalEl = document.createElement("div");
+        totalEl.className = "day-total";
+        totalEl.textContent = `今日費用小計 ${formatCurrency(totalPerPerson)}／人`;
+        content.appendChild(totalEl);
+      } catch (e) {
+        console.error("Render error:", e);
+        const c = document.getElementById("content");
+        if (c) {
+          c.innerHTML =
+            '<p style="color:#a3a8b8;padding:20px">載入失敗，請重新整理</p>';
+        }
+      }
     }
 
     const MAP_STYLE_NIGHT = [
