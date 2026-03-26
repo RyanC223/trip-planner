@@ -1308,8 +1308,22 @@
     .geo-item-head {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
       gap: 8px;
+    }
+
+    .geo-item-index {
+      color: #fbbf24;
+      font-size: 0.88rem;
+      font-weight: 800;
+      width: 1.3em;
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    .geo-item-text {
+      min-width: 0;
+      flex: 1;
     }
 
     .geo-item-choose {
@@ -1335,6 +1349,33 @@
       color: #4ade80;
       font-weight: 700;
       font-size: 0.82rem;
+    }
+
+    .geo-thumb-wrap {
+      margin-top: 8px;
+      height: 0;
+      overflow: hidden;
+      border-radius: 10px;
+      transition: height 0.2s ease;
+      border: 0 solid transparent;
+    }
+
+    .geo-item.expanded .geo-thumb-wrap {
+      height: 80px;
+    }
+
+    .geo-thumb {
+      width: 100%;
+      height: 80px;
+      object-fit: cover;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .geo-item.selected .geo-thumb {
+      border-color: #4ade80;
+      box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.25) inset;
     }
 
     .geo-status.warn {
@@ -1899,6 +1940,15 @@
       }
     }
 
+    const staticMapUrl = (lat, lng) =>
+      `https://maps.googleapis.com/maps/api/staticmap` +
+      `?center=${lat},${lng}&zoom=15&size=320x100&scale=2` +
+      `&markers=color:red|${lat},${lng}` +
+      `&style=feature:all|element:labels.text.fill|color:0x8ec3b9` +
+      `&style=feature:all|element:geometry|color:0x1d2c4d` +
+      `&style=feature:water|color:0x0e1626` +
+      `&key=AIzaSyCCrVQAJ_bJ6yewTcGeruSXi69v2qmwSAU`;
+
     function showGeoResults(items) {
       const results = document.getElementById("geoResults");
       const status = document.getElementById("geoStatus");
@@ -1913,37 +1963,60 @@
 
       const hint = document.createElement("div");
       hint.className = "geo-results-hint";
-      hint.textContent = "👆 點選以下結果設定位置";
+      hint.textContent = `找到 ${items.length} 個結果 · 點選確認位置`;
       results.appendChild(hint);
+
+      const nums = ["①", "②", "③"];
+      let selectedIndex = null;
 
       items.forEach((r) => {
         const div = document.createElement("div");
-        div.className = "geo-item";
+        const loc = r.geometry?.location || {};
+        const lat = typeof loc?.lat === "function" ? loc.lat() : loc?.lat ?? null;
+        const lng = typeof loc?.lng === "function" ? loc.lng() : loc?.lng ?? null;
         const shortName = (r.formatted_address || "").split("、")[0].split(",")[0] || "結果";
+        const idx = items.indexOf(r);
+
+        const renderList = () => {
+          const cards = results.querySelectorAll(".geo-item");
+          cards.forEach((c, ci) => {
+            c.classList.toggle("expanded", ci === (selectedIndex ?? 0));
+            c.classList.toggle("selected", ci === selectedIndex);
+            const confirm = c.querySelector(".geo-item-confirm");
+            if (confirm) {
+              confirm.style.display = ci === selectedIndex ? "block" : "none";
+            }
+          });
+        };
+
+        div.className = `geo-item${idx === 0 ? " expanded" : ""}`;
         div.innerHTML = `
           <div class="geo-item-head">
-            <div class="geo-item-title">${shortName}</div>
+            <div class="geo-item-index">${nums[idx] || `${idx + 1}.`}</div>
+            <div class="geo-item-text">
+              <div class="geo-item-title">${shortName}</div>
+              <div class="geo-item-sub">${r.formatted_address || ""}</div>
+            </div>
             <div class="geo-item-choose">選擇 →</div>
           </div>
-          <div class="geo-item-sub">${r.formatted_address || ""}</div>
+          <div class="geo-thumb-wrap">
+            <img class="geo-thumb" src="${lat != null && lng != null ? staticMapUrl(lat, lng) : ""}" alt="地圖預覽" />
+          </div>
+          <div class="geo-item-confirm" style="display:none">📍 已設定：${shortName}</div>
         `;
         div.addEventListener("click", () => {
-          modalCtx.lat = r.geometry?.location?.lat ?? null;
-          modalCtx.lng = r.geometry?.location?.lng ?? null;
-          results.innerHTML = "";
-          const selected = document.createElement("div");
-          selected.className = "geo-item selected";
-          selected.innerHTML = `
-            <div class="geo-item-head">
-              <div class="geo-item-title" style="font-weight:800">${shortName}</div>
-            </div>
-            <div class="geo-item-sub">${r.formatted_address || ""}</div>
-            <div class="geo-item-confirm">✅ 已設定：${r.formatted_address || shortName}</div>
-          `;
-          results.appendChild(selected);
-          results.style.display = "block";
+          modalCtx.lat = lat;
+          modalCtx.lng = lng;
+          selectedIndex = idx;
+          renderList();
           renderGeoUI("✅ 已設定位置");
         });
+        const img = div.querySelector(".geo-thumb");
+        if (img) {
+          img.onerror = () => {
+            img.style.display = "none";
+          };
+        }
         results.appendChild(div);
       });
       results.style.display = "block";
