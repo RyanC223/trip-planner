@@ -2509,6 +2509,12 @@
     }
 
     function renderMapView() {
+      gmap = null;
+      if (gInfoWindow) {
+        gInfoWindow.close();
+        gInfoWindow = null;
+      }
+      clearMapMarkers();
       if (!state.activeDay) return;
       const content = document.getElementById("content");
       content.innerHTML = "";
@@ -2594,15 +2600,6 @@
         state.activeView = btn.dataset.view || "itinerary";
         saveState();
         render();
-
-        if (state.activeView === "map") {
-          setTimeout(() => {
-            if (typeof gmap !== "undefined" && gmap && window.google?.maps?.event) {
-              google.maps.event.trigger(gmap, "resize");
-              gmap.setCenter({ lat: 33.5904, lng: 130.4017 });
-            }
-          }, 150);
-        }
       });
     });
 
