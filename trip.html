@@ -2756,7 +2756,7 @@
           </div>
           <div class="seg-grid">
             <div class="field"><label>交通工具</label><select data-k="icon" data-idx="${idx}">${selectHtml}</select></div>
-            <div class="field"><label>路線名稱</label><input data-k="mode" data-idx="${idx}" value="${escapeHtml(seg.mode || "")}" placeholder="山手線" /></div>
+            <div class="field"><label>路線名稱</label><input data-k="mode" data-idx="${idx}" data-user-edited="false" value="${escapeHtml(seg.mode || "")}" placeholder="山手線" /></div>
             <div class="field"><label>起點</label><input data-k="from" data-idx="${idx}" value="${escapeHtml(seg.from || "")}" placeholder="${escapeHtml(ph.from)}" /></div>
             <div class="field"><label>到達</label><input data-k="to" data-idx="${idx}" value="${escapeHtml(seg.to || "")}" placeholder="${escapeHtml(ph.to)}" /></div>
             <div class="field"><label>所需時間</label><input data-k="duration" data-idx="${idx}" value="${escapeHtml(seg.duration || "")}" placeholder="12分鐘" /></div>
@@ -2793,8 +2793,8 @@
 
           const modeInput = host.querySelector(`input[data-k="mode"][data-idx="${i}"]`);
           const currMode = String(target.mode || "").trim();
-          const isAnyDefaultName = TRANSPORT_OPTIONS.some(o => o.defaultName === currMode);
-          if (!currMode || isAnyDefaultName) {
+          const modeNotUserEdited = !modeInput || modeInput.dataset.userEdited !== "true";
+          if (!currMode || modeNotUserEdited) {
             target.mode = nextOpt.defaultName;
             if (modeInput) modeInput.value = nextOpt.defaultName;
           }
@@ -2812,6 +2812,7 @@
           const k = inp.dataset.k;
           if (!transportModalCtx.segments[i]) return;
           transportModalCtx.segments[i][k] = inp.value;
+          if (k === "mode") inp.dataset.userEdited = "true";
         });
       });
     }
