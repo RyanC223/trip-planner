@@ -2710,10 +2710,43 @@
       return wrapper;
     }
 
+    const TRANSPORT_OPTIONS = [
+      { icon: "🚶", label: "步行", defaultName: "步行" },
+      { icon: "🚇", label: "地鐵／捷運", defaultName: "捷運-XX線" },
+      { icon: "🚃", label: "電車／JR", defaultName: "電車-XX線" },
+      { icon: "🚌", label: "巴士", defaultName: "巴士" },
+      { icon: "🚕", label: "計程車", defaultName: "計程車" },
+      { icon: "🚗", label: "自駕", defaultName: "自駕" },
+      { icon: "🚲", label: "腳踏車", defaultName: "腳踏車" },
+      { icon: "✈️", label: "飛機", defaultName: "航班-XXXX" },
+      { icon: "⛴", label: "渡輪／船", defaultName: "渡輪" },
+      { icon: "🚡", label: "纜車", defaultName: "纜車" }
+    ];
+
+    function transportPlaceholders(icon) {
+      if (icon === "🚇" || icon === "🚃") return { from: "如：渋谷站", to: "如：品川站" };
+      if (icon === "🚌") return { from: "如：天神巴士站", to: "如：博多站前" };
+      if (icon === "🚶" || icon === "🚗" || icon === "🚲") return { from: "如：大濠公園", to: "如：一蘭拉麵" };
+      if (icon === "🚕") return { from: "如：飯店門口", to: "如：目的地" };
+      if (icon === "✈️") return { from: "如：福岡機場 FUK", to: "如：東京成田 NRT" };
+      if (icon === "⛴" || icon === "🚡") return { from: "如：乘船處", to: "如：碼頭" };
+      return { from: "如：起點", to: "如：目的地" };
+    }
+
+    function optionByIcon(icon) {
+      return TRANSPORT_OPTIONS.find((o) => o.icon === icon) || TRANSPORT_OPTIONS[0];
+    }
+
     function renderTransportSegmentsEditor(segments) {
       const host = document.getElementById("transportSegments");
       host.innerHTML = "";
       segments.forEach((seg, idx) => {
+        const opt = optionByIcon(seg.icon);
+        seg.icon = opt.icon;
+        const ph = transportPlaceholders(seg.icon);
+        const selectHtml = TRANSPORT_OPTIONS.map((o) =>
+          `<option value="${escapeHtml(o.icon)}"${o.icon === seg.icon ? " selected" : ""}>${escapeHtml(o.icon)} ${escapeHtml(o.label)}</option>`
+        ).join("");
         const card = document.createElement("div");
         card.className = "seg-edit-card";
         card.innerHTML = `
@@ -2722,10 +2755,10 @@
             <button type="button" class="modal-close transport-seg-del" data-idx="${idx}" aria-label="Delete">✕</button>
           </div>
           <div class="seg-grid">
-            <div class="field"><label>圖示</label><input data-k="icon" data-idx="${idx}" value="${escapeHtml(seg.icon || "")}" placeholder="🚇" /></div>
+            <div class="field"><label>交通工具</label><select data-k="icon" data-idx="${idx}">${selectHtml}</select></div>
             <div class="field"><label>路線名稱</label><input data-k="mode" data-idx="${idx}" value="${escapeHtml(seg.mode || "")}" placeholder="山手線" /></div>
-            <div class="field"><label>起始站</label><input data-k="from" data-idx="${idx}" value="${escapeHtml(seg.from || "")}" placeholder="渋谷站" /></div>
-            <div class="field"><label>終點站</label><input data-k="to" data-idx="${idx}" value="${escapeHtml(seg.to || "")}" placeholder="品川站" /></div>
+            <div class="field"><label>起點</label><input data-k="from" data-idx="${idx}" value="${escapeHtml(seg.from || "")}" placeholder="${escapeHtml(ph.from)}" /></div>
+            <div class="field"><label>到達</label><input data-k="to" data-idx="${idx}" value="${escapeHtml(seg.to || "")}" placeholder="${escapeHtml(ph.to)}" /></div>
             <div class="field"><label>所需時間</label><input data-k="duration" data-idx="${idx}" value="${escapeHtml(seg.duration || "")}" placeholder="12分鐘" /></div>
             <div class="field"><label>費用</label><input data-k="cost" data-idx="${idx}" value="${escapeHtml(seg.cost || "")}" placeholder="¥200" /></div>
           </div>
@@ -2746,6 +2779,30 @@
           if (arr.length <= 1) return;
           arr.splice(i, 1);
           renderTransportSegmentsEditor(arr);
+        });
+      });
+      host.querySelectorAll('select[data-k="icon"]').forEach((sel) => {
+        sel.addEventListener("change", () => {
+          const i = Number(sel.dataset.idx);
+          const arr = transportModalCtx.segments || [];
+          const target = arr[i];
+          if (!target) return;
+          const prevOpt = optionByIcon(target.icon);
+          const nextOpt = optionByIcon(sel.value);
+          target.icon = nextOpt.icon;
+
+          const modeInput = host.querySelector(`input[data-k="mode"][data-idx="${i}"]`);
+          const currMode = String(target.mode || "").trim();
+          if (!currMode || currMode === prevOpt.defaultName) {
+            target.mode = nextOpt.defaultName;
+            if (modeInput) modeInput.value = nextOpt.defaultName;
+          }
+
+          const ph = transportPlaceholders(nextOpt.icon);
+          const fromInput = host.querySelector(`input[data-k="from"][data-idx="${i}"]`);
+          const toInput = host.querySelector(`input[data-k="to"][data-idx="${i}"]`);
+          if (fromInput) fromInput.placeholder = ph.from;
+          if (toInput) toInput.placeholder = ph.to;
         });
       });
       host.querySelectorAll("input[data-k]").forEach((inp) => {
