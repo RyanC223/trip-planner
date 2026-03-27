@@ -1804,6 +1804,7 @@
     let state = loadState();
     let draggingId = null;
     let reorderDirty = false;
+    let transportReviewSet = new Set(); // 新增：格式為 "day-idx"，如 "2-1"
     let weatherCache = null;
     let weatherMeta = { hasStartDate: false, offsetDays: 0, startTooFar: false };
     let pendingScrollItemId = null;
@@ -2643,6 +2644,11 @@
           }]
           : [];
       const isOvernightTrain = !!transport.isOvernightTrain;
+      const needsReview = transportReviewSet.has(`${state.activeDay}-${index}`);
+      const lineLabel = isOvernightTrain ? "⚠ 跨日交通" : "交通路線";
+      const reviewBadge = needsReview
+        ? `<span style="margin-left:8px;font-size:0.72rem;background:rgba(251,146,60,0.18);border:1px solid rgba(251,146,60,0.5);color:#fb923c;border-radius:999px;padding:2px 8px;">⚠ 請確認路線</span>`
+        : "";
       const wrapper = document.createElement("div");
       wrapper.className = `transport${isOvernightTrain ? " overnight" : ""}`;
 
@@ -2650,7 +2656,7 @@
       mainRow.className = "transport-main";
       mainRow.innerHTML = `
         <div class="transport-left">
-          <span class="transport-line">${isOvernightTrain ? "⚠ 跨日交通" : "交通路線"}</span>
+          <span class="transport-line">${lineLabel}</span>${reviewBadge}
         </div>
         <div style="display:flex;gap:6px;align-items:center">
           <button class="edit-btn no-print" type="button" title="編輯">✎ 編輯</button>
@@ -3482,7 +3488,15 @@
       if (state.activeDay === 0) return;
       const next = !state.reorderMode;
       if (state.reorderMode && !next) {
-        if (reorderDirty) saveState();
+        if (reorderDirty) {
+          saveState();
+          // 對目前這天所有有資料的交通節點標記需確認
+          const day = state.activeDay;
+          const transports = dayTransports(day);
+          transports.forEach((t, i) => {
+            if (t) transportReviewSet.add(`${day}-${i}`);
+          });
+        }
         reorderDirty = false;
       }
       state.reorderMode = next;
@@ -3625,6 +3639,10 @@
       delete seg.detail;
       seg.alternatives = [];
       seg.isOvernightTrain = !!document.getElementById("t_overnight").checked;
+
+      // 使用者已確認並儲存，清除該節點的 review 標記
+      const key = `${transportModalCtx.day}-${transportModalCtx.index}`;
+      transportReviewSet.delete(key);
 
       saveState();
       closeTransportModal();
