@@ -1,4 +1,4 @@
-const CACHE = 'trip-v37';
+const CACHE = 'trip-v38';
 const ASSETS = ['./trip.html'];
 
 self.addEventListener('install', e => {

@@ -944,6 +944,37 @@
       text-align: right;
     }
 
+    .transport-body {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.2s ease;
+      margin-top: 0;
+    }
+    .transport-body.open {
+      max-height: 600px;
+      opacity: 1;
+      margin-top: 6px;
+    }
+    .transport-expand-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid #424c6c;
+      background: #242b3f;
+      color: #dce2f6;
+      display: grid;
+      place-items: center;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: transform 0.16s ease;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .transport-expand-btn.expanded {
+      transform: rotate(180deg);
+    }
+
     .transport.overnight .seg-sub,
     .transport.overnight .transport-total {
       color: #fde68a;
@@ -2628,39 +2659,59 @@
       const segments = Array.isArray(transport.segments)
         ? transport.segments
         : transport.main
-          ? [{
-            icon: transport.main.icon ?? "",
-            mode: transport.main.mode ?? "",
-            from: "",
-            to: "",
-            duration: transport.main.duration ?? "",
-            cost: transport.main.cost ?? ""
-          }]
+          ? [{ icon: transport.main.icon ?? "", mode: transport.main.mode ?? "", from: "", to: "", duration: transport.main.duration ?? "", cost: transport.main.cost ?? "" }]
           : [];
       const isOvernightTrain = !!transport.isOvernightTrain;
       const needsReview = transportReviewSet.has(`${state.activeDay}-${index}`);
-      const lineLabel = isOvernightTrain ? "⚠ 跨日交通" : "交通路線";
+
+      // 摘要列：第一段圖標＋名稱，以及總時間費用
+      let totalMins = 0;
+      let totalCost = 0;
+      segments.forEach(s => {
+        totalMins += parseDurationMinutes(s.duration);
+        totalCost += parseYen(s.cost);
+      });
+      const firstSeg = segments[0] || {};
+      const summaryText = `${firstSeg.icon || ""} ${firstSeg.mode || ""}${segments.length > 1 ? ` +${segments.length - 1}段` : ""} · ${totalMins}分鐘 ${formatCurrency(totalCost)}`.replace(/\s+/g, " ").trim();
+
+      const lineLabel = isOvernightTrain
+        ? `<span style="color:#f59e0b;">⚠ 跨日交通</span>`
+        : `<span style="color:#8a94b0;font-size:0.75rem;">交通路線</span>`;
       const reviewBadge = needsReview
-        ? `<span style="margin-left:8px;font-size:0.72rem;background:rgba(251,146,60,0.18);border:1px solid rgba(251,146,60,0.5);color:#fb923c;border-radius:999px;padding:2px 8px;">⚠ 請確認路線</span>`
+        ? `<span style="margin-left:8px;font-size:0.72rem;background:rgba(251,146,60,0.18);border:1px solid rgba(251,146,60,0.5);color:#fb923c;border-radius:999px;padding:2px 8px;">⚠ 請確認</span>`
         : "";
+
       const wrapper = document.createElement("div");
       wrapper.className = `transport${isOvernightTrain ? " overnight" : ""}`;
+      wrapper.dataset.transportIndex = String(index);
 
-      const mainRow = document.createElement("div");
-      mainRow.className = "transport-main";
-      mainRow.innerHTML = `
-        <div class="transport-left">
-          <span class="transport-line">${lineLabel}</span>${reviewBadge}
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="edit-btn no-print" type="button" title="編輯">✎ 編輯</button>
-        </div>
-      `;
+      // 收合時的頭列：[⌄按鈕] [label] [reviewBadge]  |  [摘要文字]
+      const header = document.createElement("div");
+      header.style.cssText = "display:flex;align-items:center;gap:8px;cursor:pointer;";
+      header.innerHTML = `
+      <button class="transport-expand-btn no-print" type="button" title="展開">⌄</button>
+      <div style="flex:1;min-width:0;overflow:hidden;">
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">${lineLabel}${reviewBadge}</div>
+        <div class="transport-summary" style="font-size:0.8rem;color:#bac1d9;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${summaryText}</div>
+      </div>
+    `;
+
+      // 展開後的 body：完整 timeline ＋ 鉛筆編輯按鈕
+      const body = document.createElement("div");
+      body.className = "transport-body";
+
+      const editRow = document.createElement("div");
+      editRow.style.cssText = "display:flex;justify-content:flex-end;margin-bottom:4px;";
+      const editBtn = document.createElement("button");
+      editBtn.className = "edit-btn no-print";
+      editBtn.type = "button";
+      editBtn.title = "編輯";
+      editBtn.textContent = "✎";
+      editRow.appendChild(editBtn);
+      body.appendChild(editRow);
 
       const timeline = document.createElement("div");
       timeline.className = "transport-timeline";
-      let totalMins = 0;
-      let totalCost = 0;
 
       segments.forEach((seg, i) => {
         const row = document.createElement("div");
@@ -2668,24 +2719,16 @@
         const dot = document.createElement("span");
         dot.className = "seg-dot";
         dot.style.background = transportDotColor(seg.mode, seg.icon);
-
         const main = document.createElement("div");
         main.className = "seg-main";
         main.textContent = `${seg.icon || ""} ${seg.mode || ""} ${seg.duration || ""} ${seg.cost || ""}`.replace(/\s+/g, " ").trim();
-
         const sub = document.createElement("div");
         sub.className = "seg-sub";
-        const subLine = `${seg.from || ""} ${seg.to ? `→ ${seg.to}` : ""}`.trim();
-        sub.textContent = subLine || " ";
-
+        sub.textContent = `${seg.from || ""}${seg.to ? " → " + seg.to : ""}`.trim() || " ";
         row.appendChild(dot);
         row.appendChild(main);
         row.appendChild(sub);
         timeline.appendChild(row);
-
-        totalMins += parseDurationMinutes(seg.duration);
-        totalCost += parseYen(seg.cost);
-
         if (i < segments.length - 1) {
           const transfer = document.createElement("div");
           transfer.className = "transfer-node";
@@ -2698,15 +2741,32 @@
       total.className = "transport-total";
       total.textContent = `合計 ${totalMins}分鐘  ${formatCurrency(totalCost)}`;
       timeline.appendChild(total);
+      body.appendChild(timeline);
 
-      mainRow.querySelector(".edit-btn").addEventListener("click", (e) => {
+      // 展開／收合邏輯
+      const expandBtn = header.querySelector(".transport-expand-btn");
+      const toggle = () => {
+        const isOpen = body.classList.toggle("open");
+        expandBtn.classList.toggle("expanded", isOpen);
+        const summary = header.querySelector(".transport-summary");
+        if (summary) summary.style.display = isOpen ? "none" : "";
+      };
+      header.addEventListener("click", (e) => {
+        if (e.target === editBtn) return;
+        toggle();
+      });
+      expandBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggle();
+      });
+
+      editBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         openTransportModal(state.activeDay, index);
       });
 
-      wrapper.append(mainRow);
-      wrapper.append(timeline);
-      wrapper.dataset.transportIndex = String(index);
+      wrapper.appendChild(header);
+      wrapper.appendChild(body);
       return wrapper;
     }
 
