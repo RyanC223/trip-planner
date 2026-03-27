@@ -3143,8 +3143,30 @@
           block.appendChild(createCardNode(item, day));
           content.appendChild(block);
 
-          if (idx < items.length - 1 && transports[idx]) {
-            content.appendChild(createTransportNode(transports[idx], idx));
+          if (idx < items.length - 1) {
+            if (transports[idx]) {
+              content.appendChild(createTransportNode(transports[idx], idx));
+            } else {
+              const addT = document.createElement("div");
+              addT.style.cssText = "text-align:center;padding:6px 0;";
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.textContent = "＋ 新增交通路線";
+              btn.style.cssText = "background:transparent;border:1px dashed #3b445f;border-radius:999px;color:#7c8cff;font-size:0.78rem;padding:5px 14px;cursor:pointer;";
+              btn.addEventListener("click", () => {
+                const transports = dayTransports(state.activeDay);
+                while (transports.length <= idx) transports.push(null);
+                transports[idx] = {
+                  isOvernightTrain: false,
+                  segments: [{ icon: "🚶", mode: "步行", from: "", to: "", duration: "15分鐘", cost: "免費" }]
+                };
+                saveState();
+                render();
+                openTransportModal(state.activeDay, idx);
+              });
+              addT.appendChild(btn);
+              content.appendChild(addT);
+            }
           }
         });
 
@@ -3535,6 +3557,11 @@
           note: "",
           bestTime: payload.bestTime
         });
+        // 新增景點後確保 transport 陣列有對應佔位
+        const transports = dayTransports(day);
+        while (transports.length < list.length - 1) {
+          transports.push(null);
+        }
       }
 
       saveState();
