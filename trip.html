@@ -1668,7 +1668,7 @@
 
   <script>
     const STORAGE_KEY = "tripPlanner_fukuoka_v1";
-    const DATA_VERSION = 5;
+    const DATA_VERSION = 6;
     const roomId = new URLSearchParams(location.search).get("room");
 
     // Firebase
@@ -1929,6 +1929,17 @@
                 ]
               };
             });
+          }
+        }
+
+        // v6 migration: 若 transportByDay 所有天都是空陣列，
+        // 代表 Firebase 資料損壞，從 defaultData 重置
+        if (prev < 6) {
+          const allEmpty = Object.values(state.transportByDay || {})
+            .every(arr => !Array.isArray(arr) || arr.length === 0);
+          if (allEmpty) {
+            state.transportByDay = structuredClone(defaultData.transportByDay);
+            console.log("transportByDay 已從 defaultData 重置");
           }
         }
 
