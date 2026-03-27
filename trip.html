@@ -3307,6 +3307,42 @@
     }
 
     function render() {
+      // 確保每個交通段都有 segments 陣列
+      if (state.transportByDay) {
+        for (const day of Object.keys(state.transportByDay)) {
+          const list = (state.transportByDay[day] || []);
+          if (!Array.isArray(list)) continue;
+          list.forEach(t => {
+            if (!t) return;
+            // Firebase 把 segments 陣列變成物件，轉回來
+            if (t.segments && !Array.isArray(t.segments)) {
+              t.segments = Object.keys(t.segments)
+                .sort((a,b) => Number(a)-Number(b))
+                .map(k => t.segments[k]);
+            }
+            // 舊格式 main -> segments
+            if (!t.segments || t.segments.length === 0) {
+              if (t.main) {
+                t.segments = [{
+                  icon: t.main.icon || '',
+                  mode: t.main.mode || '',
+                  from: '',
+                  to: '',
+                  duration: t.main.duration || '',
+                  cost: t.main.cost || ''
+                }];
+              } else {
+                t.segments = [{
+                  icon: '🚶', mode: '步行',
+                  from: '', to: '',
+                  duration: '15分鐘', cost: '免費'
+                }];
+              }
+            }
+          });
+        }
+      }
+
       if (!roomId) {
         renderRoomScreen();
         return;
