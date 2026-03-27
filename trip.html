@@ -2793,7 +2793,8 @@
 
           const modeInput = host.querySelector(`input[data-k="mode"][data-idx="${i}"]`);
           const currMode = String(target.mode || "").trim();
-          if (!currMode || currMode === prevOpt.defaultName) {
+          const isAnyDefaultName = TRANSPORT_OPTIONS.some(o => o.defaultName === currMode);
+          if (!currMode || isAnyDefaultName) {
             target.mode = nextOpt.defaultName;
             if (modeInput) modeInput.value = nextOpt.defaultName;
           }
