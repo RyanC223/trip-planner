@@ -838,6 +838,10 @@
       padding-left: 10px;
       color: #bac1d9;
       font-size: 0.8rem;
+      border: 1px solid #2f3650;
+      border-radius: 14px;
+      padding: 10px 10px 10px 12px;
+      background: rgba(255, 255, 255, 0.02);
     }
 
     .transport-detail {
@@ -869,14 +873,14 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      cursor: pointer;
+      cursor: default;
       border-radius: 9px;
-      padding: 6px 7px;
+      padding: 0 0 6px;
       transition: 0.15s ease;
     }
 
     .transport-main:hover {
-      background: rgba(255, 255, 255, 0.03);
+      background: transparent;
     }
 
     .transport-left {
@@ -890,6 +894,111 @@
 
     .transport-line {
       display: inline-block;
+    }
+
+    .transport-timeline {
+      position: relative;
+      margin-left: 2px;
+      padding-left: 14px;
+      border-left: 1px solid #3f4865;
+    }
+
+    .seg-row {
+      position: relative;
+      padding: 6px 0 10px 0;
+    }
+
+    .seg-dot {
+      position: absolute;
+      left: -19px;
+      top: 11px;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      border: 2px solid #0f1117;
+      background: #60a5fa;
+    }
+
+    .seg-main {
+      font-size: 0.82rem;
+      color: #dbe3fb;
+      font-weight: 650;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .seg-sub {
+      margin-top: 3px;
+      font-size: 0.75rem;
+      color: #9aa4c0;
+    }
+
+    .transfer-node {
+      margin: 4px 0 2px;
+      font-size: 0.74rem;
+      color: #f59e0b;
+      font-weight: 650;
+    }
+
+    .transport-total {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #3a425c;
+      font-size: 0.8rem;
+      color: #c7d0ec;
+      text-align: right;
+    }
+
+    .transport.overnight .seg-sub,
+    .transport.overnight .transport-total {
+      color: #fde68a;
+    }
+
+    .transport.overnight .transfer-node {
+      color: #ffe8a3;
+    }
+
+    /* transport modal layout */
+    #transportModal .modal-card {
+      display: flex;
+      flex-direction: column;
+      max-height: 85vh;
+      padding-bottom: 0;
+    }
+
+    #transportForm {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 8px;
+    }
+
+    .seg-edit-card {
+      border: 1px solid #2f3650;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .seg-edit-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 0.82rem;
+      color: #c8d1ea;
+      font-weight: 700;
+    }
+
+    .seg-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .seg-grid .field {
+      margin: 0;
     }
 
     .route-chip {
@@ -1519,41 +1628,22 @@
   <div class="modal-overlay" id="transportModal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="transportModalTitle">
       <div class="modal-head">
-        <p class="modal-title" id="transportModalTitle">編輯交通段</p>
+        <p class="modal-title" id="transportModalTitle">編輯交通路線</p>
         <button class="modal-close" type="button" id="transportModalClose" aria-label="Close">✕</button>
       </div>
       <form class="modal-form" id="transportForm">
-        <div class="field">
-          <label for="t_icon">交通方式圖示（icon）</label>
-          <input id="t_icon" name="icon" type="text" placeholder="如 🚶 🚇 🚌 🚕" />
-        </div>
-        <div class="field">
-          <label for="t_mode">交通方式名稱（mode）</label>
-          <input id="t_mode" name="mode" type="text" placeholder="如 步行 / 地鐵" />
-        </div>
-        <div class="field">
-          <label for="t_duration">所需時間（duration）</label>
-          <input id="t_duration" name="duration" type="text" placeholder="如 18分鐘" />
-        </div>
-        <div class="field">
-          <label for="t_cost">費用（cost）</label>
-          <input id="t_cost" name="cost" type="text" placeholder="如 ¥260/人 或 免費" />
-        </div>
-        <div class="field">
-          <label for="t_detail">路線說明（detail）</label>
-          <input id="t_detail" name="detail" type="text" placeholder="如「地鐵空港線，2站」" />
-        </div>
+        <div id="transportSegments"></div>
+        <button class="btn" id="addSegmentBtn" type="button" style="background:#242b3f;color:#e8edff;border:1px solid #424c6c">＋ 新增一段</button>
         <div class="field">
           <label style="display:flex;gap:10px;align-items:center;margin:0">
             <input id="t_overnight" name="isOvernightTrain" type="checkbox" style="width:auto" />
             是否為跨日/新幹線（isOvernightTrain）
           </label>
         </div>
-
-        <div class="modal-actions" style="grid-template-columns: 1fr;">
-          <button class="btn btn-primary" type="submit">儲存</button>
-        </div>
       </form>
+      <div class="spot-modal-footer">
+        <button class="btn btn-primary" type="submit" form="transportForm">儲存</button>
+      </div>
     </div>
   </div>
 
@@ -1578,7 +1668,7 @@
 
   <script>
     const STORAGE_KEY = "tripPlanner_fukuoka_v1";
-    const DATA_VERSION = 4;
+    const DATA_VERSION = 5;
     const roomId = new URLSearchParams(location.search).get("room");
 
     // Firebase
@@ -1674,23 +1764,33 @@
         1: [
           {
             id: "t1",
-            main: { icon: "🚶", mode: "步行", duration: "15分鐘", cost: "免費" },
-            detail: "步行，沿大濠公園湖畔步道",
+            segments: [
+              {
+                icon: "🚶",
+                mode: "步行",
+                from: "大濠公園",
+                to: "一蘭拉麵",
+                duration: "15分鐘",
+                cost: "免費"
+              }
+            ],
             isOvernightTrain: false,
-            alternatives: [
-              { icon: "🚕", mode: "計程車", duration: "10分鐘", cost: "¥800" },
-              { icon: "🚌", mode: "巴士", duration: "20分鐘", cost: "¥150/人" }
-            ]
+            alternatives: []
           },
           {
             id: "t2",
-            main: { icon: "🚇", mode: "地鐵", duration: "18分鐘", cost: "¥260/人" },
-            detail: "地鐵空港線，天神站搭乘，2站",
+            segments: [
+              {
+                icon: "🚇",
+                mode: "地鐵空港線",
+                from: "天神站",
+                to: "博多站",
+                duration: "18分鐘",
+                cost: "¥260"
+              }
+            ],
             isOvernightTrain: true,
-            alternatives: [
-              { icon: "🚶", mode: "步行", duration: "25分鐘", cost: "免費" },
-              { icon: "🚕", mode: "計程車", duration: "8分鐘", cost: "¥600" }
-            ]
+            alternatives: []
           }
         ],
         2: [],
@@ -1715,21 +1815,45 @@
     let gInfoWindow = null;
 
     function migrateTransportSegment(seg) {
-      if (seg.main && typeof seg.main === "object") {
+      if (Array.isArray(seg.segments)) {
         return {
           id: seg.id,
-          main: { ...seg.main },
+          segments: seg.segments,
+          isOvernightTrain: !!seg.isOvernightTrain,
+          alternatives: Array.isArray(seg.alternatives) ? seg.alternatives : []
+        };
+      }
+      if (seg.main && typeof seg.main === "object") {
+        const m = seg.main;
+        return {
+          id: seg.id,
+          segments: [
+            {
+              icon: m.icon ?? "",
+              mode: m.mode ?? "",
+              from: "",
+              to: "",
+              duration: m.duration ?? "",
+              cost: m.cost ?? ""
+            }
+          ],
+          isOvernightTrain: !!seg.isOvernightTrain,
           alternatives: Array.isArray(seg.alternatives) ? seg.alternatives : []
         };
       }
       return {
         id: seg.id,
-        main: {
-          icon: seg.icon ?? "",
-          mode: seg.mode ?? "",
-          duration: seg.duration ?? "",
-          cost: seg.cost ?? ""
-        },
+        segments: [
+          {
+            icon: seg.icon ?? "",
+            mode: seg.mode ?? "",
+            from: "",
+            to: "",
+            duration: seg.duration ?? "",
+            cost: seg.cost ?? ""
+          }
+        ],
+        isOvernightTrain: !!seg.isOvernightTrain,
         alternatives: Array.isArray(seg.alternatives) ? seg.alternatives : []
       };
     }
@@ -1765,6 +1889,45 @@
               if (!fb) return;
               if (needLat) spot.lat = fb.lat;
               if (needLng) spot.lng = fb.lng;
+            });
+          }
+        }
+
+        // v5 migration: transport.main -> transport.segments
+        if (prev < 5 && state.transportByDay) {
+          for (const day of Object.keys(state.transportByDay)) {
+            const list = Array.isArray(state.transportByDay[day]) ? state.transportByDay[day] : [];
+            state.transportByDay[day] = list.map((seg) => {
+              if (!seg) return seg;
+              if (Array.isArray(seg.segments)) return seg;
+              if (seg.main && typeof seg.main === "object") {
+                return {
+                  ...seg,
+                  segments: [
+                    {
+                      icon: seg.main.icon ?? "",
+                      mode: seg.main.mode ?? "",
+                      from: "",
+                      to: "",
+                      duration: seg.main.duration ?? "",
+                      cost: seg.main.cost ?? ""
+                    }
+                  ]
+                };
+              }
+              return {
+                ...seg,
+                segments: [
+                  {
+                    icon: seg.icon ?? "",
+                    mode: seg.mode ?? "",
+                    from: "",
+                    to: "",
+                    duration: seg.duration ?? "",
+                    cost: seg.cost ?? ""
+                  }
+                ]
+              };
             });
           }
         }
@@ -1832,6 +1995,24 @@
           if (Array.isArray(s.transportByDay[key])) {
             s.transportByDay[key] = s.transportByDay[key].map((t) => {
               if (!t) return t;
+              if (!Array.isArray(t.segments)) {
+                if (t.main && typeof t.main === "object") {
+                  t.segments = [
+                    {
+                      icon: t.main.icon ?? "",
+                      mode: t.main.mode ?? "",
+                      from: "",
+                      to: "",
+                      duration: t.main.duration ?? "",
+                      cost: t.main.cost ?? ""
+                    }
+                  ];
+                } else {
+                  t.segments = [];
+                }
+              } else if (t.segments && !Array.isArray(t.segments)) {
+                t.segments = toArr(t.segments);
+              }
               if (t.alternatives && !Array.isArray(t.alternatives)) {
                 t.alternatives = toArr(t.alternatives);
               }
@@ -2438,15 +2619,19 @@
     }
 
     function createTransportNode(transport, index) {
-      const m = transport.main || {};
-      const icon = m.icon ?? m.emoji ?? "";
-      const mode = m.mode ?? m.type ?? "";
-      const duration = m.duration ?? m.time ?? "";
-      const cost = m.cost ?? m.fee ?? "";
+      const segments = Array.isArray(transport.segments)
+        ? transport.segments
+        : transport.main
+          ? [{
+            icon: transport.main.icon ?? "",
+            mode: transport.main.mode ?? "",
+            from: "",
+            to: "",
+            duration: transport.main.duration ?? "",
+            cost: transport.main.cost ?? ""
+          }]
+          : [];
       const isOvernightTrain = !!transport.isOvernightTrain;
-      const prefix = isOvernightTrain ? "⚠ 跨日交通 " : "";
-      const mainLine = `${prefix}${icon} ${mode} ${duration} ${cost}`.replace(/\s+/g, " ").trim();
-
       const wrapper = document.createElement("div");
       wrapper.className = `transport${isOvernightTrain ? " overnight" : ""}`;
 
@@ -2454,52 +2639,54 @@
       mainRow.className = "transport-main";
       mainRow.innerHTML = `
         <div class="transport-left">
-          <span class="transport-line">${mainLine}</span>
+          <span class="transport-line">${isOvernightTrain ? "⚠ 跨日交通" : "交通路線"}</span>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-          <button class="route-chip no-print" type="button">替代路線</button>
-          <button class="edit-btn no-print" type="button" title="編輯">✎</button>
+          <button class="edit-btn no-print" type="button" title="編輯">✎ 編輯</button>
         </div>
       `;
 
-      let detailEl = null;
-      if (transport.detail) {
-        detailEl = document.createElement("div");
-        detailEl.className = "transport-detail";
-        detailEl.textContent = transport.detail;
-      }
+      const timeline = document.createElement("div");
+      timeline.className = "transport-timeline";
+      let totalMins = 0;
+      let totalCost = 0;
 
-      const alt = document.createElement("div");
-      alt.className = "alt-routes";
-      (transport.alternatives || []).forEach((t) => {
-        const altIcon = t.icon ?? t.emoji ?? "";
-        const altMode = t.mode ?? t.type ?? "";
-        const altDuration = t.duration ?? t.time ?? "";
-        const altCost = t.cost ?? t.fee ?? "";
-        const altLine = `${altIcon} ${altMode} ${altDuration} ${altCost}`.replace(/\s+/g, " ").trim();
-
+      segments.forEach((seg, i) => {
         const row = document.createElement("div");
-        row.className = "alt-route-item";
-        row.innerHTML = `<span class="alt-route-line">${altLine}</span>`;
-        row.addEventListener("click", (e) => {
-          e.stopPropagation();
-          transport.main = {
-            icon: altIcon,
-            mode: altMode,
-            duration: altDuration,
-            cost: altCost
-          };
-          alt.classList.remove("open");
-          saveState();
-          render();
-        });
-        alt.appendChild(row);
+        row.className = "seg-row";
+        const dot = document.createElement("span");
+        dot.className = "seg-dot";
+        dot.style.background = transportDotColor(seg.mode, seg.icon);
+
+        const main = document.createElement("div");
+        main.className = "seg-main";
+        main.textContent = `${seg.icon || ""} ${seg.mode || ""} ${seg.duration || ""} ${seg.cost || ""}`.replace(/\s+/g, " ").trim();
+
+        const sub = document.createElement("div");
+        sub.className = "seg-sub";
+        const subLine = `${seg.from || ""} ${seg.to ? `→ ${seg.to}` : ""}`.trim();
+        sub.textContent = subLine || " ";
+
+        row.appendChild(dot);
+        row.appendChild(main);
+        row.appendChild(sub);
+        timeline.appendChild(row);
+
+        totalMins += parseDurationMinutes(seg.duration);
+        totalCost += parseYen(seg.cost);
+
+        if (i < segments.length - 1) {
+          const transfer = document.createElement("div");
+          transfer.className = "transfer-node";
+          transfer.textContent = `◇ 轉乘 ${seg.to || "中繼站"}`;
+          timeline.appendChild(transfer);
+        }
       });
 
-      mainRow.querySelector(".route-chip").addEventListener("click", (e) => {
-        e.stopPropagation();
-        alt.classList.toggle("open");
-      });
+      const total = document.createElement("div");
+      total.className = "transport-total";
+      total.textContent = `合計 ${totalMins}分鐘  ${formatCurrency(totalCost)}`;
+      timeline.appendChild(total);
 
       mainRow.querySelector(".edit-btn").addEventListener("click", (e) => {
         e.stopPropagation();
@@ -2507,29 +2694,83 @@
       });
 
       wrapper.append(mainRow);
-      if (detailEl) wrapper.append(detailEl);
-      wrapper.append(alt);
+      wrapper.append(timeline);
       wrapper.dataset.transportIndex = String(index);
       return wrapper;
+    }
+
+    function renderTransportSegmentsEditor(segments) {
+      const host = document.getElementById("transportSegments");
+      host.innerHTML = "";
+      segments.forEach((seg, idx) => {
+        const card = document.createElement("div");
+        card.className = "seg-edit-card";
+        card.innerHTML = `
+          <div class="seg-edit-head">
+            <span>第 ${idx + 1} 段</span>
+            <button type="button" class="modal-close transport-seg-del" data-idx="${idx}" aria-label="Delete">✕</button>
+          </div>
+          <div class="seg-grid">
+            <div class="field"><label>圖示</label><input data-k="icon" data-idx="${idx}" value="${escapeHtml(seg.icon || "")}" placeholder="🚇" /></div>
+            <div class="field"><label>路線名稱</label><input data-k="mode" data-idx="${idx}" value="${escapeHtml(seg.mode || "")}" placeholder="山手線" /></div>
+            <div class="field"><label>起始站</label><input data-k="from" data-idx="${idx}" value="${escapeHtml(seg.from || "")}" placeholder="渋谷站" /></div>
+            <div class="field"><label>終點站</label><input data-k="to" data-idx="${idx}" value="${escapeHtml(seg.to || "")}" placeholder="品川站" /></div>
+            <div class="field"><label>所需時間</label><input data-k="duration" data-idx="${idx}" value="${escapeHtml(seg.duration || "")}" placeholder="12分鐘" /></div>
+            <div class="field"><label>費用</label><input data-k="cost" data-idx="${idx}" value="${escapeHtml(seg.cost || "")}" placeholder="¥200" /></div>
+          </div>
+        `;
+        host.appendChild(card);
+        if (idx < segments.length - 1) {
+          const node = document.createElement("div");
+          node.className = "transfer-node";
+          node.style.margin = "2px 2px 10px";
+          node.textContent = `◇ 轉乘 ${segments[idx].to || "中繼站"}`;
+          host.appendChild(node);
+        }
+      });
+      host.querySelectorAll(".transport-seg-del").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const i = Number(btn.dataset.idx);
+          const arr = transportModalCtx.segments || [];
+          if (arr.length <= 1) return;
+          arr.splice(i, 1);
+          renderTransportSegmentsEditor(arr);
+        });
+      });
+      host.querySelectorAll("input[data-k]").forEach((inp) => {
+        inp.addEventListener("input", () => {
+          const i = Number(inp.dataset.idx);
+          const k = inp.dataset.k;
+          if (!transportModalCtx.segments[i]) return;
+          transportModalCtx.segments[i][k] = inp.value;
+        });
+      });
     }
 
     function openTransportModal(day, index) {
       transportModalCtx = { day, index };
       const seg = dayTransports(day)[index];
       if (!seg) return;
-      const m = seg.main || {};
+      transportModalCtx.segments = (Array.isArray(seg.segments) && seg.segments.length
+        ? structuredClone(seg.segments)
+        : seg.main
+          ? [{
+            icon: seg.main.icon || "",
+            mode: seg.main.mode || "",
+            from: "",
+            to: "",
+            duration: seg.main.duration || "",
+            cost: seg.main.cost || ""
+          }]
+          : [{ icon: "", mode: "", from: "", to: "", duration: "", cost: "" }]
+      ).slice(0, 5);
 
-      document.getElementById("t_icon").value = m.icon || "";
-      document.getElementById("t_mode").value = m.mode || "";
-      document.getElementById("t_duration").value = m.duration || "";
-      document.getElementById("t_cost").value = m.cost || "";
-      document.getElementById("t_detail").value = seg.detail || "";
       document.getElementById("t_overnight").checked = !!seg.isOvernightTrain;
+      renderTransportSegmentsEditor(transportModalCtx.segments);
 
       const overlay = document.getElementById("transportModal");
       overlay.classList.add("show");
       overlay.setAttribute("aria-hidden", "false");
-      document.getElementById("t_icon").focus();
     }
 
     function closeTransportModal() {
@@ -2549,6 +2790,28 @@
       const matched = value.replace(/,/g, "").match(/¥\s*([\d.]+)/);
       if (!matched) return 0;
       return Number(matched[1]) || 0;
+    }
+
+    function parseDurationMinutes(value) {
+      if (!value) return 0;
+      const m = String(value).match(/(\d+(?:\.\d+)?)/);
+      if (!m) return 0;
+      return Math.round(Number(m[1]) || 0);
+    }
+
+    function transportDotColor(mode, icon) {
+      const src = `${mode || ""} ${icon || ""}`;
+      if (src.includes("步行") || src.includes("🚶")) return "#9ca3af";
+      if (src.includes("計程車") || src.includes("🚕")) return "#facc15";
+      return "#60a5fa";
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
     }
 
     function getRecommendation(item) {
@@ -3198,20 +3461,36 @@
       if (e.target === e.currentTarget) closeTransportModal();
     });
     document.getElementById("transportModalClose").addEventListener("click", closeTransportModal);
+    document.getElementById("addSegmentBtn").addEventListener("click", () => {
+      const arr = transportModalCtx.segments || [];
+      if (arr.length >= 5) return;
+      arr.push({ icon: "", mode: "", from: "", to: "", duration: "", cost: "" });
+      transportModalCtx.segments = arr;
+      renderTransportSegmentsEditor(arr);
+    });
     document.getElementById("transportForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const day = transportModalCtx.day;
       const idx = transportModalCtx.index;
       const seg = dayTransports(day)[idx];
       if (!seg) return;
+      const cleaned = (transportModalCtx.segments || [])
+        .map((s) => ({
+          icon: String(s.icon || "").trim(),
+          mode: String(s.mode || "").trim(),
+          from: String(s.from || "").trim(),
+          to: String(s.to || "").trim(),
+          duration: String(s.duration || "").trim(),
+          cost: String(s.cost || "").trim()
+        }))
+        .filter((s) => s.icon || s.mode || s.from || s.to || s.duration || s.cost);
 
-      seg.main = {
-        icon: document.getElementById("t_icon").value.trim(),
-        mode: document.getElementById("t_mode").value.trim(),
-        duration: document.getElementById("t_duration").value.trim(),
-        cost: document.getElementById("t_cost").value.trim()
-      };
-      seg.detail = document.getElementById("t_detail").value.trim();
+      seg.segments = cleaned.length
+        ? cleaned
+        : [{ icon: "🚶", mode: "步行", from: "", to: "", duration: "", cost: "免費" }];
+      delete seg.main;
+      delete seg.detail;
+      seg.alternatives = [];
       seg.isOvernightTrain = !!document.getElementById("t_overnight").checked;
 
       saveState();
@@ -3427,13 +3706,26 @@
 
           const seg = (state.transportByDay?.[d] || [])[idx];
           if (idx < items.length - 1 && seg) {
-            const m = seg.main || {};
+            const segments = Array.isArray(seg.segments)
+              ? seg.segments
+              : seg.main
+                ? [{
+                  icon: seg.main.icon || "",
+                  mode: seg.main.mode || "",
+                  from: "",
+                  to: "",
+                  duration: seg.main.duration || "",
+                  cost: seg.main.cost || ""
+                }]
+                : [];
+            const lines = segments.map((s) =>
+              `${s.icon || ""} ${s.mode || ""} ${s.duration || ""} ${s.cost || ""}`.replace(/\s+/g, " ").trim()
+            ).join("<br/>");
             html += `
               <div class="transport" style="margin:8px 6px;padding-left:10px;">
                 <div style="display:flex;gap:8px;align-items:center;color:#111;">
-                  <div style="font-variant-numeric:tabular-nums;">${m.icon || ""} ${m.mode || ""} ${m.duration || ""} ${m.cost || ""}</div>
+                  <div style="font-variant-numeric:tabular-nums;">${lines}</div>
                 </div>
-                ${seg.detail ? `<div class="transport-detail" style="margin-top:4px;font-size:12px;color:#6b7280;">${seg.detail}</div>` : ""}
               </div>
             `;
           }
