@@ -2714,6 +2714,11 @@
       expandBtn.title = "展開";
       expandBtn.textContent = "⌄";
 
+      if (state.reorderMode) {
+        expandBtn.style.display = "none";
+        editBtn.style.display = "none";
+      }
+
       btnGroup.appendChild(editBtn);
       btnGroup.appendChild(expandBtn);
 
