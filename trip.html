@@ -1657,14 +1657,14 @@
         <button class="modal-close" type="button" id="transportModalClose" aria-label="Close">✕</button>
       </div>
       <form class="modal-form" id="transportForm">
-        <div id="transportSegments"></div>
-        <button class="btn" id="addSegmentBtn" type="button" style="background:#242b3f;color:#e8edff;border:1px solid #424c6c">＋ 新增一段</button>
-        <div class="field">
-          <label style="display:flex;gap:10px;align-items:center;margin:0">
-            <input id="t_overnight" name="isOvernightTrain" type="checkbox" style="width:auto" />
-            是否為跨日/新幹線（isOvernightTrain）
+        <div class="field" style="margin-bottom:10px;padding:8px 10px;border-radius:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);">
+          <label style="display:flex;gap:10px;align-items:center;margin:0;cursor:pointer;">
+            <input id="t_overnight" name="isOvernightTrain" type="checkbox" style="width:auto;accent-color:#f59e0b;" />
+            <span style="color:#fbbf24;font-size:0.85rem;">⚠ 標記為跨日交通／新幹線</span>
           </label>
         </div>
+        <div id="transportSegments"></div>
+        <button class="btn" id="addSegmentBtn" type="button" style="background:#242b3f;color:#e8edff;border:1px solid #424c6c">＋ 新增一段</button>
       </form>
       <div class="spot-modal-footer">
         <button class="btn btn-primary" type="submit" form="transportForm">儲存</button>
