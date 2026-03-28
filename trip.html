@@ -2685,30 +2685,44 @@
       wrapper.className = `transport${isOvernightTrain ? " overnight" : ""}`;
       wrapper.dataset.transportIndex = String(index);
 
-      // 收合時的頭列：[⌄按鈕] [label] [reviewBadge]  |  [摘要文字]
+      // header：左側文字資訊，右側 [✎隱藏][⌄]，與行程卡片對齊
       const header = document.createElement("div");
       header.style.cssText = "display:flex;align-items:center;gap:8px;cursor:pointer;";
-      header.innerHTML = `
-      <button class="transport-expand-btn no-print" type="button" title="展開">⌄</button>
-      <div style="flex:1;min-width:0;overflow:hidden;">
-        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">${lineLabel}${reviewBadge}</div>
-        <div class="transport-summary" style="font-size:0.8rem;color:#bac1d9;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${summaryText}</div>
-      </div>
-    `;
 
-      // 展開後的 body：完整 timeline ＋ 鉛筆編輯按鈕
-      const body = document.createElement("div");
-      body.className = "transport-body";
+      // 左側文字區（label + reviewBadge + 摘要）
+      const infoDiv = document.createElement("div");
+      infoDiv.style.cssText = "flex:1;min-width:0;overflow:hidden;";
+      infoDiv.innerHTML = `
+    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">${lineLabel}${reviewBadge}</div>
+    <div class="transport-summary" style="font-size:0.8rem;color:#bac1d9;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${summaryText}</div>
+  `;
 
-      const editRow = document.createElement("div");
-      editRow.style.cssText = "display:flex;justify-content:flex-end;margin-bottom:4px;";
+      // 右側按鈕區
+      const btnGroup = document.createElement("div");
+      btnGroup.style.cssText = "display:flex;align-items:center;gap:6px;flex-shrink:0;";
+
       const editBtn = document.createElement("button");
       editBtn.className = "edit-btn no-print";
       editBtn.type = "button";
       editBtn.title = "編輯";
       editBtn.textContent = "✎";
-      editRow.appendChild(editBtn);
-      body.appendChild(editRow);
+      editBtn.style.display = "none"; // 收合時隱藏
+
+      const expandBtn = document.createElement("button");
+      expandBtn.className = "transport-expand-btn no-print";
+      expandBtn.type = "button";
+      expandBtn.title = "展開";
+      expandBtn.textContent = "⌄";
+
+      btnGroup.appendChild(editBtn);
+      btnGroup.appendChild(expandBtn);
+
+      header.appendChild(infoDiv);
+      header.appendChild(btnGroup);
+
+      // 展開後的 body：完整 timeline
+      const body = document.createElement("div");
+      body.className = "transport-body";
 
       const timeline = document.createElement("div");
       timeline.className = "transport-timeline";
@@ -2744,11 +2758,11 @@
       body.appendChild(timeline);
 
       // 展開／收合邏輯
-      const expandBtn = header.querySelector(".transport-expand-btn");
       const toggle = () => {
         const isOpen = body.classList.toggle("open");
         expandBtn.classList.toggle("expanded", isOpen);
-        const summary = header.querySelector(".transport-summary");
+        editBtn.style.display = isOpen ? "" : "none";
+        const summary = infoDiv.querySelector(".transport-summary");
         if (summary) summary.style.display = isOpen ? "none" : "";
       };
       header.addEventListener("click", (e) => {
@@ -2759,7 +2773,6 @@
         e.stopPropagation();
         toggle();
       });
-
       editBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         openTransportModal(state.activeDay, index);
