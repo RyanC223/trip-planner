@@ -13,7 +13,7 @@
   <link rel="manifest" href="manifest.json">
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCCrVQAJ_bJ6yewTcGeruSXi69v2qmwSAU&language=zh-TW&loading=async"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCCrVQAJ_bJ6yewTcGeruSXi69v2qmwSAU&language=zh-TW&libraries=places&loading=async"></script>
   <style>
     :root {
       --bg: #0f1117;
@@ -2294,6 +2294,7 @@
 
       modalCtx.lat = item?.lat ?? null;
       modalCtx.lng = item?.lng ?? null;
+      modalCtx.placeId = item?.placeId ?? null;
       renderGeoUI();
 
       overlay.classList.add("show");
@@ -2305,7 +2306,7 @@
       const overlay = document.getElementById("spotModal");
       overlay.classList.remove("show");
       overlay.setAttribute("aria-hidden", "true");
-      modalCtx = { day: state.activeDay, itemId: null, lat: null, lng: null };
+      modalCtx = { day: state.activeDay, itemId: null, lat: null, lng: null, placeId: null };
     }
 
     function renderGeoUI(message = "") {
@@ -2403,6 +2404,7 @@
         div.addEventListener("click", () => {
           modalCtx.lat = lat;
           modalCtx.lng = lng;
+          modalCtx.placeId = r.place_id || null;
           selectedIndex = idx;
           renderList();
           renderGeoUI("✅ 已設定位置");
@@ -2422,30 +2424,27 @@
     function doGeoSearch() {
       const name = (document.getElementById("f_name")?.value || "").trim();
       if (!name) return;
-
       renderGeoUI("🔍 搜尋中…");
       document.getElementById("geoResults").style.display = "none";
-
-      if (!window.google?.maps?.Geocoder) {
+      if (!window.google?.maps?.places?.PlacesService) {
         renderGeoUI("搜尋失敗，請手動確認位置");
         return;
       }
-
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode(
-        { address: name + " 日本", region: "jp", language: "zh-TW" },
+      const fakeMap = new google.maps.Map(document.createElement("div"));
+      const service = new google.maps.places.PlacesService(fakeMap);
+      service.textSearch(
+        { query: name + " 日本", language: "zh-TW" },
         (results, status) => {
-          if (status !== "OK" || !results?.length) {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !results?.length) {
             renderGeoUI("找不到結果，請換個名稱再試");
             return;
           }
-
           const mapped = results.slice(0, 3).map((r) => {
             const loc = r.geometry?.location;
             return {
-              ...r,
+              place_id: r.place_id || null,
+              formatted_address: r.formatted_address || r.vicinity || "",
               geometry: {
-                ...(r.geometry || {}),
                 location: {
                   lat: typeof loc?.lat === "function" ? loc.lat() : loc?.lat ?? null,
                   lng: typeof loc?.lng === "function" ? loc.lng() : loc?.lng ?? null
@@ -3248,6 +3247,57 @@
       });
     }
 
+    const _hoursCache = {};
+
+    function fetchAndShowHoursWarning(item, cardEl, day) {
+      if (!state.notifications?.hours) return;
+      if (!item.placeId) return;
+      const dateStr = getDayDateStr(day);
+      if (!dateStr) return;
+      const cacheKey = item.placeId + "_" + dateStr;
+      const dayDate = getDayDate(day);
+      const weekdayIndex = dayDate ? dayDate.getDay() : -1;
+      if (weekdayIndex < 0) return;
+
+      const inject = (isClosed, hoursText) => {
+        const existing = cardEl.querySelector(".hours-warning");
+        if (existing) existing.remove();
+        if (isClosed) {
+          const warn = document.createElement("div");
+          warn.className = "hours-warning";
+          warn.style.cssText = "margin-top:6px;padding:4px 8px;border-radius:7px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);font-size:0.75rem;color:#fca5a5;";
+          warn.textContent = `⚠ 注意：此景點當天可能公休`;
+          if (hoursText) warn.title = hoursText;
+          const tagRow = cardEl.querySelector(".tag-row");
+          if (tagRow) tagRow.after(warn);
+        }
+      };
+
+      if (_hoursCache[cacheKey] !== undefined) {
+        inject(_hoursCache[cacheKey].isClosed, _hoursCache[cacheKey].text);
+        return;
+      }
+
+      if (!window.google?.maps?.places?.PlacesService) return;
+      const fakeMap = new google.maps.Map(document.createElement("div"));
+      const service = new google.maps.places.PlacesService(fakeMap);
+      service.getDetails(
+        { placeId: item.placeId, fields: ["opening_hours"] },
+        (place, status) => {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !place?.opening_hours) {
+            _hoursCache[cacheKey] = { isClosed: false, text: "" };
+            return;
+          }
+          const periods = place.opening_hours.periods || [];
+          const openToday = periods.some(p => p.open?.day === weekdayIndex);
+          const isClosed = periods.length > 0 && !openToday;
+          const hoursText = place.opening_hours.weekday_text?.[weekdayIndex] || "";
+          _hoursCache[cacheKey] = { isClosed, text: hoursText };
+          inject(isClosed, hoursText);
+        }
+      );
+    }
+
     function createCardNode(item, day) {
       // 防護：確保欄位不為 undefined
       item = {
@@ -3264,7 +3314,8 @@
         expanded: !!item.expanded,
         lat: item.lat || null,
         lng: item.lng || null,
-        ...item
+        ...item,
+        placeId: item.placeId ?? null
       };
       const card = document.createElement("article");
       card.className = `card${item.done ? " done" : ""}${state.reorderMode ? " reorder" : ""}`;
@@ -3383,6 +3434,10 @@
           if (at < 0 || at >= dayItems(day).length - 1) return;
           moveSpot(day, at, +1);
         });
+      }
+
+      if (state.notifications?.hours && item.placeId) {
+        setTimeout(() => fetchAndShowHoursWarning(item, card, day), 0);
       }
 
       return card;
@@ -3814,7 +3869,8 @@
         stay: document.getElementById("f_duration").value,
         bestTime: document.getElementById("f_bestTime").value.trim(),
         lat: modalCtx.lat,
-        lng: modalCtx.lng
+        lng: modalCtx.lng,
+        placeId: modalCtx.placeId ?? null
       };
 
       if (!payload.title) payload.title = "未命名景點";
@@ -3834,6 +3890,7 @@
           item.bestTime = payload.bestTime;
           item.lat = payload.lat;
           item.lng = payload.lng;
+          item.placeId = payload.placeId ?? null;
         }
       } else {
         list.push({
@@ -3846,6 +3903,7 @@
           cost: payload.cost,
           lat: payload.lat ?? null,
           lng: payload.lng ?? null,
+          placeId: payload.placeId ?? null,
           done: false,
           expanded: false,
           note: "",
