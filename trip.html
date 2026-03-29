@@ -1792,7 +1792,7 @@
             <div style="font-size:0.72rem;color:#7a8198;line-height:1.45;margin-top:3px;">行程日期若遇假日，景點卡自動顯示提示標籤，避免誤以為正常營業</div>
           </div>
           <label class="settings-toggle">
-            <input id="settingsReminderHoliday" type="checkbox" disabled />
+            <input id="settingsReminderHoliday" type="checkbox" />
             <span class="tog-slider"></span>
           </label>
         </div>
@@ -1802,7 +1802,7 @@
             <div style="font-size:0.72rem;color:#7a8198;line-height:1.45;margin-top:3px;">花火大會、祭典等特殊人潮期間，在行程頂部顯示橘色提醒橫幅</div>
           </div>
           <label class="settings-toggle">
-            <input id="settingsReminderCrowd" type="checkbox" disabled />
+            <input id="settingsReminderCrowd" type="checkbox" />
             <span class="tog-slider"></span>
           </label>
         </div>
@@ -1812,7 +1812,7 @@
             <div style="font-size:0.72rem;color:#7a8198;line-height:1.45;margin-top:3px;">行程時間與景點公休或閉館衝突時，景點卡顯示黃色警示圖示</div>
           </div>
           <label class="settings-toggle">
-            <input id="settingsReminderHours" type="checkbox" disabled />
+            <input id="settingsReminderHours" type="checkbox" />
             <span class="tog-slider"></span>
           </label>
         </div>
@@ -1881,6 +1881,7 @@
       tripName: "福岡家庭旅遊",
       days: 6,
       people: 4,
+      notifications: { holiday: true, festival: true, hours: true },
       startDate: "",
       activeDay: 1,
       activeView: "itinerary",
@@ -2935,6 +2936,48 @@
       return wrapper;
     }
 
+    // ── 通知靜態資料庫 ──────────────────────────────
+    const JAPAN_HOLIDAYS_2025 = ["2025-01-01","2025-01-13","2025-02-11","2025-02-23","2025-02-24","2025-03-20","2025-04-29","2025-05-03","2025-05-04","2025-05-05","2025-05-06","2025-07-21","2025-08-11","2025-09-15","2025-09-23","2025-10-13","2025-11-03","2025-11-23","2025-11-24"];
+    const JAPAN_HOLIDAYS_2026 = ["2026-01-01","2026-01-12","2026-02-11","2026-02-23","2026-03-20","2026-04-29","2026-05-03","2026-05-04","2026-05-05","2026-05-06","2026-07-20","2026-08-11","2026-09-21","2026-09-22","2026-09-23","2026-10-12","2026-11-03","2026-11-23"];
+    const ALL_HOLIDAYS = new Set([...JAPAN_HOLIDAYS_2025, ...JAPAN_HOLIDAYS_2026]);
+
+    const JAPAN_FESTIVALS = [
+      { name: "福岡祇園山笠", region: "福岡", startMD: "07-01", endMD: "07-15" },
+      { name: "博多どんたく", region: "福岡", startMD: "05-03", endMD: "05-04" },
+      { name: "大濠公園花火大会", region: "福岡", startMD: "08-01", endMD: "08-01" },
+      { name: "京都祇園祭", region: "京都", startMD: "07-01", endMD: "07-31" },
+      { name: "東京隅田川花火大会", region: "東京", startMD: "07-26", endMD: "07-26" },
+      { name: "阿波踊り", region: "德島", startMD: "08-12", endMD: "08-15" },
+    ];
+
+    function getDayDate(day) {
+      if (!state.startDate) return null;
+      const base = new Date(state.startDate + "T00:00:00");
+      base.setDate(base.getDate() + (day - 1));
+      return base;
+    }
+
+    function getDayDateStr(day) {
+      const d = getDayDate(day);
+      if (!d) return null;
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${d.getFullYear()}-${mm}-${dd}`;
+    }
+
+    function isHoliday(day) {
+      const s = getDayDateStr(day);
+      return s ? ALL_HOLIDAYS.has(s) : false;
+    }
+
+    function getFestivalWarning(day) {
+      const d = getDayDate(day);
+      if (!d) return null;
+      const md = `${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      return JAPAN_FESTIVALS.find(f => md >= f.startMD && md <= f.endMD) || null;
+    }
+    // ───────────────────────────────────────────────
+
     const TRANSPORT_OPTIONS = [
       { icon: "🚶", label: "步行", defaultName: "步行" },
       { icon: "🚇", label: "地鐵／捷運", defaultName: "捷運-XX線" },
@@ -3360,6 +3403,24 @@
           empty.textContent = `第${day}天目前尚無行程`;
           content.appendChild(empty);
           return;
+        }
+
+        // 節慶人潮橫幅
+        if (state.notifications?.festival) {
+          const fest = getFestivalWarning(day);
+          if (fest) {
+            const banner = document.createElement("div");
+            banner.style.cssText = "margin:0 0 10px;padding:8px 12px;border-radius:10px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);font-size:0.8rem;color:#fbbf24;";
+            banner.textContent = `⚠ ${fest.name} 期間（${fest.region}），人潮較多，請注意交通與等候時間`;
+            content.insertBefore(banner, content.firstChild);
+          }
+        }
+        // 假日橫幅
+        if (state.notifications?.holiday && isHoliday(day)) {
+          const banner = document.createElement("div");
+          banner.style.cssText = "margin:0 0 10px;padding:8px 12px;border-radius:10px;background:rgba(124,140,255,0.1);border:1px solid rgba(124,140,255,0.25);font-size:0.8rem;color:#a8b4ff;";
+          banner.textContent = "🗓 今日為日本國定假日，部分景點可能休館或人潮較多，請事先確認";
+          content.insertBefore(banner, content.firstChild);
         }
 
         items.forEach((item, idx) => {
@@ -3881,6 +3942,10 @@
     // Settings modal
     function openSettingsModal() {
       const overlay = document.getElementById("settingsModal");
+      const n = state.notifications || { holiday: true, festival: true, hours: true };
+      document.getElementById("settingsReminderHoliday").checked = !!n.holiday;
+      document.getElementById("settingsReminderCrowd").checked = !!n.festival;
+      document.getElementById("settingsReminderHours").checked = !!n.hours;
       overlay.classList.add("show");
       overlay.setAttribute("aria-hidden", "false");
     }
@@ -3889,6 +3954,16 @@
       overlay.classList.remove("show");
       overlay.setAttribute("aria-hidden", "true");
     }
+    ["settingsReminderHoliday","settingsReminderCrowd","settingsReminderHours"].forEach(id => {
+      document.getElementById(id).addEventListener("change", () => {
+        if (!state.notifications) state.notifications = { holiday: true, festival: true, hours: true };
+        state.notifications.holiday = document.getElementById("settingsReminderHoliday").checked;
+        state.notifications.festival = document.getElementById("settingsReminderCrowd").checked;
+        state.notifications.hours = document.getElementById("settingsReminderHours").checked;
+        saveState();
+        render();
+      });
+    });
     document.getElementById("settingsBtn").addEventListener("click", () => {
       if (!roomId) return;
       openSettingsModal();
