@@ -3248,6 +3248,7 @@
     }
 
     const _hoursCache = {};
+    const _hoursDismissed = new Set(); // session only，key = placeId + "_" + dateStr
 
     function fetchAndShowHoursWarning(item, cardEl, day) {
       if (!state.notifications?.hours) return;
@@ -3262,15 +3263,27 @@
       const inject = (isClosed, hoursText) => {
         const existing = cardEl.querySelector(".hours-warning");
         if (existing) existing.remove();
-        if (isClosed) {
-          const warn = document.createElement("div");
-          warn.className = "hours-warning";
-          warn.style.cssText = "margin-top:6px;padding:4px 8px;border-radius:7px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);font-size:0.75rem;color:#fca5a5;";
-          warn.textContent = `⚠ 注意：此景點當天可能公休`;
-          if (hoursText) warn.title = hoursText;
-          const tagRow = cardEl.querySelector(".tag-row");
-          if (tagRow) tagRow.after(warn);
-        }
+        if (!isClosed) return;
+        if (_hoursDismissed.has(cacheKey)) return;
+        const warn = document.createElement("div");
+        warn.className = "hours-warning";
+        warn.style.cssText = "margin-top:6px;padding:5px 8px 5px 10px;border-radius:7px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);font-size:0.75rem;color:#fca5a5;display:flex;align-items:center;justify-content:space-between;gap:8px;";
+        const msgSpan = document.createElement("span");
+        msgSpan.textContent = "⚠ 注意：此景點當天可能公休";
+        if (hoursText) msgSpan.title = hoursText;
+        const dismissBtn = document.createElement("button");
+        dismissBtn.type = "button";
+        dismissBtn.textContent = "忽略";
+        dismissBtn.style.cssText = "flex-shrink:0;background:transparent;border:1px solid rgba(252,165,165,0.4);border-radius:999px;color:#fca5a5;font-size:0.7rem;padding:2px 8px;cursor:pointer;white-space:nowrap;";
+        dismissBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          _hoursDismissed.add(cacheKey);
+          warn.remove();
+        });
+        warn.appendChild(msgSpan);
+        warn.appendChild(dismissBtn);
+        const tagRow = cardEl.querySelector(".tag-row");
+        if (tagRow) tagRow.after(warn);
       };
 
       if (_hoursCache[cacheKey] !== undefined) {
