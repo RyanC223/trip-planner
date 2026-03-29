@@ -1542,6 +1542,95 @@
     .spot-modal-footer .btn {
       flex: 1;
     }
+
+    .settings-action-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid #1e2336;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+    }
+    .settings-action-row:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: #2f3650;
+    }
+    .settings-action-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .settings-sec-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #5a6380;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 18px 0 6px;
+    }
+    .settings-sec-label:first-child { margin-top: 0; }
+    .settings-toggle-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid #181d2c;
+      gap: 12px;
+    }
+    .settings-toggle-row:last-child { border-bottom: none; }
+    .settings-toggle {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .settings-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .settings-toggle .tog-slider {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: #242b3f;
+      border: 1px solid #2f3650;
+      transition: 0.2s;
+      cursor: pointer;
+    }
+    .settings-toggle .tog-slider::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #5a6380;
+      left: 2px;
+      top: 2px;
+      transition: 0.2s;
+    }
+    .settings-toggle input:checked + .tog-slider { background: #7c8cff; border-color: #7c8cff; }
+    .settings-toggle input:checked + .tog-slider::before { transform: translateX(18px); background: #fff; }
+    .settings-info-box {
+      background: rgba(124,140,255,0.06);
+      border: 1px solid rgba(124,140,255,0.15);
+      border-radius: 10px;
+      padding: 9px 11px;
+      margin-top: 10px;
+      font-size: 11.5px;
+      color: #7880a0;
+      line-height: 1.55;
+    }
   </style>
 </head>
 <body>
@@ -1568,8 +1657,7 @@
           </div>
         </div>
         <div class="top-actions">
-          <button class="swap-btn no-print" type="button" id="swapRoomBtn" style="display:none">🔄 換行程</button>
-          <button class="swap-btn no-print" type="button" id="exportBtn" style="display:none">📄 匯出</button>
+          <button class="swap-btn no-print" type="button" id="settingsBtn" style="display:none" title="設定">⚙</button>
         </div>
       </div>
 
@@ -1668,6 +1756,69 @@
       </form>
       <div class="spot-modal-footer">
         <button class="btn btn-primary" type="submit" form="transportForm">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="settingsModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle" style="max-height:85vh;display:flex;flex-direction:column;">
+      <div class="modal-head">
+        <p class="modal-title" id="settingsModalTitle">⚙ 設定</p>
+        <button class="modal-close" type="button" id="settingsModalClose" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-form" style="flex:1;overflow-y:auto;padding-bottom:8px;">
+        <div class="settings-sec-label">行程管理</div>
+        <button type="button" class="settings-action-row no-print" id="settingsSwapBtn">
+          <div class="settings-action-icon" style="background:rgba(124,140,255,0.15);">🔄</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:650;font-size:0.9rem;">換行程</div>
+            <div style="font-size:0.75rem;color:#8a94b0;line-height:1.45;margin-top:2px;">切換到其他行程碼，或加入家人分享的行程。目前行程資料不會遺失。</div>
+          </div>
+          <span style="color:#5a6380;font-size:1.15rem;line-height:1;flex-shrink:0;">›</span>
+        </button>
+        <button type="button" class="settings-action-row no-print" id="settingsExportBtn">
+          <div class="settings-action-icon" style="background:rgba(59,130,246,0.18);">📄</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:650;font-size:0.9rem;">匯出行程 PDF</div>
+            <div style="font-size:0.75rem;color:#8a94b0;line-height:1.45;margin-top:2px;">將所有天行程輸出為可列印格式，方便離線備用或給長輩查閱。</div>
+          </div>
+          <span style="color:#5a6380;font-size:1.15rem;line-height:1;flex-shrink:0;">›</span>
+        </button>
+
+        <div class="settings-sec-label">行程提醒</div>
+        <div class="settings-toggle-row">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:650;font-size:0.85rem;">日本國定假日提醒</div>
+            <div style="font-size:0.72rem;color:#7a8198;line-height:1.45;margin-top:3px;">行程日期若遇假日，景點卡自動顯示提示標籤，避免誤以為正常營業</div>
+          </div>
+          <label class="settings-toggle">
+            <input id="settingsReminderHoliday" type="checkbox" disabled />
+            <span class="tog-slider"></span>
+          </label>
+        </div>
+        <div class="settings-toggle-row">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:650;font-size:0.85rem;">大型節慶人潮警示</div>
+            <div style="font-size:0.72rem;color:#7a8198;line-height:1.45;margin-top:3px;">花火大會、祭典等特殊人潮期間，在行程頂部顯示橘色提醒橫幅</div>
+          </div>
+          <label class="settings-toggle">
+            <input id="settingsReminderCrowd" type="checkbox" disabled />
+            <span class="tog-slider"></span>
+          </label>
+        </div>
+        <div class="settings-toggle-row">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:650;font-size:0.85rem;">景點營業時間警示</div>
+            <div style="font-size:0.72rem;color:#7a8198;line-height:1.45;margin-top:3px;">行程時間與景點公休或閉館衝突時，景點卡顯示黃色警示圖示</div>
+          </div>
+          <label class="settings-toggle">
+            <input id="settingsReminderHours" type="checkbox" disabled />
+            <span class="tog-slider"></span>
+          </label>
+        </div>
+        <div class="settings-info-box">
+          以上三項提醒功能使用內建靜態資料庫，不需網路連線即可運作，也不會消耗額外 API 配額。
+        </div>
       </div>
     </div>
   </div>
@@ -2564,24 +2715,20 @@
 
     function setRoomHeaderUI() {
       const line = document.getElementById("roomLine");
-      const swapBtn = document.getElementById("swapRoomBtn");
-      const exportBtn = document.getElementById("exportBtn");
       const reorderBtn = document.getElementById("reorderBtn");
       const dayTabs = document.querySelector(".day-tabs-wrap");
       const subtabs = document.querySelector(".subtabs");
 
       if (roomId) {
         line.style.display = "flex";
-        swapBtn.style.display = "inline-flex";
-        exportBtn.style.display = "inline-flex";
+        document.getElementById("settingsBtn").style.display = "inline-flex";
         document.getElementById("roomText").textContent = `行程碼：${roomId}`;
         if (reorderBtn) reorderBtn.style.display = "";
         if (dayTabs) dayTabs.style.display = "";
         if (subtabs) subtabs.style.display = "";
       } else {
         line.style.display = "none";
-        swapBtn.style.display = "none";
-        exportBtn.style.display = "none";
+        document.getElementById("settingsBtn").style.display = "none";
         if (reorderBtn) reorderBtn.style.display = "none";
         if (dayTabs) dayTabs.style.display = "none";
         if (subtabs) subtabs.style.display = "none";
@@ -3731,11 +3878,149 @@
       }
     });
 
-    document.getElementById("swapRoomBtn").addEventListener("click", () => {
+    // Settings modal
+    function openSettingsModal() {
+      const overlay = document.getElementById("settingsModal");
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden", "false");
+    }
+    function closeSettingsModal() {
+      const overlay = document.getElementById("settingsModal");
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden", "true");
+    }
+    document.getElementById("settingsBtn").addEventListener("click", () => {
+      if (!roomId) return;
+      openSettingsModal();
+    });
+    document.getElementById("settingsModal").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) closeSettingsModal();
+    });
+    document.getElementById("settingsModalClose").addEventListener("click", closeSettingsModal);
+    document.getElementById("settingsSwapBtn").addEventListener("click", () => {
+      closeSettingsModal();
       const url = new URL(location.href);
       url.searchParams.delete("room");
       history.pushState({}, "", url.toString());
       location.reload();
+    });
+
+    function exportTripPdf() {
+      if (!roomId) return;
+      const content = document.getElementById("content");
+      const prev = {
+        html: content.innerHTML,
+        activeDay: state.activeDay,
+        activeView: state.activeView,
+        reorderMode: state.reorderMode
+      };
+
+      // Build print-only itinerary: only days with spots
+      const start = state.startDate ? state.startDate : "";
+      const headerHtml = `
+        <div style="margin: 8px 0 14px;">
+          <div style="font-size:18px;font-weight:800;margin-bottom:6px;">${state.tripName}</div>
+          <div style="font-size:13px;color:#111;">${state.days} 天行程 · ${state.people} 人</div>
+          <div style="font-size:13px;color:#111;">出發日期：${start || "未設定"}</div>
+          <div style="font-size:13px;color:#111;">行程碼：${roomId}</div>
+        </div>
+      `;
+
+      let html = headerHtml;
+      for (let d = 1; d <= state.days; d += 1) {
+        const items = state.itineraryByDay?.[d] || [];
+        if (!items.length) continue; // do not print empty day
+        const dayDate = (state.startDate ? (() => {
+          const base = new Date(state.startDate + "T00:00:00");
+          base.setDate(base.getDate() + (d - 1));
+          return `${base.getMonth() + 1}/${base.getDate()}`;
+        })() : "");
+        const weekday = (() => {
+          const base = state.startDate ? new Date(state.startDate + "T00:00:00") : new Date();
+          base.setHours(0,0,0,0);
+          base.setDate(base.getDate() + (d - 1));
+          const w = ["日","一","二","三","四","五","六"][base.getDay()];
+          return `星期${w}`;
+        })();
+        const title = state.startDate ? `第${d}天 · ${dayDate} ${weekday}` : `第${d}天 · ${weekday}`;
+
+        html += `<div style="margin-top:14px;margin-bottom:10px;font-size:15px;font-weight:800;">${title}</div>`;
+
+        items.forEach((item, idx) => {
+          const note = item.note ? item.note.replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
+          const best = item.bestTime ? item.bestTime.replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
+          html += `
+            <div class="card" style="margin:10px 0;">
+              <div style="display:flex;justify-content:space-between;gap:10px;">
+                <div style="min-width:52px;font-variant-numeric:tabular-nums;">${item.time || ""}</div>
+                <div style="flex:1;">
+                  <div style="font-size:16px;font-weight:800;">${item.title || ""}</div>
+                  <div style="font-size:12px;color:#333;">${item.subtitle || ""}</div>
+                </div>
+              </div>
+              <div style="margin-top:8px;font-size:12px;color:#111;">
+                <span style="display:inline-block;border:1px solid #ccc;border-radius:999px;padding:2px 8px;margin-right:6px;">${item.type || ""}</span>
+                <span style="margin-right:8px;">停留：${item.stay || ""}</span>
+                <span>費用：${item.cost || ""}</span>
+              </div>
+              <div class="detail open" style="max-height:none;opacity:1;margin-top:10px;">
+                <div class="detail-inner" style="border-top:1px solid #ddd;padding-top:8px;color:#111;">
+                  ${best ? `<div style="margin-top:4px;"><span style="font-weight:700;">最佳時段：</span>${best}</div>` : ""}
+                  ${note ? `<div style="margin-top:6px;white-space:pre-wrap;"><span style="font-weight:700;">備註：</span>${note}</div>` : ""}
+                </div>
+              </div>
+            </div>
+          `;
+
+          const seg = (state.transportByDay?.[d] || [])[idx];
+          if (idx < items.length - 1 && seg) {
+            const segments = Array.isArray(seg.segments)
+              ? seg.segments
+              : seg.main
+                ? [{
+                  icon: seg.main.icon || "",
+                  mode: seg.main.mode || "",
+                  from: "",
+                  to: "",
+                  duration: seg.main.duration || "",
+                  cost: seg.main.cost || ""
+                }]
+                : [];
+            const lines = segments.map((s) =>
+              `${s.icon || ""} ${s.mode || ""} ${s.duration || ""} ${s.cost || ""}`.replace(/\s+/g, " ").trim()
+            ).join("<br/>");
+            html += `
+              <div class="transport" style="margin:8px 6px;padding-left:10px;">
+                <div style="display:flex;gap:8px;align-items:center;color:#111;">
+                  <div style="font-variant-numeric:tabular-nums;">${lines}</div>
+                </div>
+              </div>
+            `;
+          }
+        });
+
+        const totalPerPerson = items.reduce((sum, i) => sum + (typeof i.cost === "string" && i.cost.includes("¥") ? (Number((i.cost.replace(/,/g,"").match(/¥\s*([\d.]+)/)||[])[1])||0) : 0), 0);
+        html += `<div class="day-total" style="margin:12px 4px 0;padding-top:10px;border-top:1px solid #ddd;text-align:right;color:#111;">當日費用小計 ¥${totalPerPerson.toLocaleString("en-US")}／人</div>`;
+      }
+
+      // Switch to a print-only view (do not mutate state / no saveState)
+      content.innerHTML = html;
+      window.scrollTo(0, 0);
+
+      const restore = () => {
+        content.innerHTML = prev.html;
+        state.activeDay = prev.activeDay;
+        state.activeView = prev.activeView;
+        state.reorderMode = prev.reorderMode;
+        render();
+      };
+      window.addEventListener("afterprint", restore, { once: true });
+      setTimeout(() => window.print(), 0);
+    }
+
+    document.getElementById("settingsExportBtn").addEventListener("click", () => {
+      closeSettingsModal();
+      exportTripPdf();
     });
 
     function openStartDateModal() {
@@ -3858,119 +4143,6 @@
     document.getElementById("editTripTitleBtn").addEventListener("click", () => {
       if (!roomId) return;
       beginEditTripTitle();
-    });
-
-    document.getElementById("exportBtn").addEventListener("click", () => {
-      if (!roomId) return;
-      const content = document.getElementById("content");
-      const prev = {
-        html: content.innerHTML,
-        activeDay: state.activeDay,
-        activeView: state.activeView,
-        reorderMode: state.reorderMode
-      };
-
-      // Build print-only itinerary: only days with spots
-      const start = state.startDate ? state.startDate : "";
-      const headerHtml = `
-        <div style="margin: 8px 0 14px;">
-          <div style="font-size:18px;font-weight:800;margin-bottom:6px;">${state.tripName}</div>
-          <div style="font-size:13px;color:#111;">${state.days} 天行程 · ${state.people} 人</div>
-          <div style="font-size:13px;color:#111;">出發日期：${start || "未設定"}</div>
-          <div style="font-size:13px;color:#111;">行程碼：${roomId}</div>
-        </div>
-      `;
-
-      let html = headerHtml;
-      for (let d = 1; d <= state.days; d += 1) {
-        const items = state.itineraryByDay?.[d] || [];
-        if (!items.length) continue; // do not print empty day
-        const dayDate = (state.startDate ? (() => {
-          const base = new Date(state.startDate + "T00:00:00");
-          base.setDate(base.getDate() + (d - 1));
-          return `${base.getMonth() + 1}/${base.getDate()}`;
-        })() : "");
-        const weekday = (() => {
-          const base = state.startDate ? new Date(state.startDate + "T00:00:00") : new Date();
-          base.setHours(0,0,0,0);
-          base.setDate(base.getDate() + (d - 1));
-          const w = ["日","一","二","三","四","五","六"][base.getDay()];
-          return `星期${w}`;
-        })();
-        const title = state.startDate ? `第${d}天 · ${dayDate} ${weekday}` : `第${d}天 · ${weekday}`;
-
-        html += `<div style="margin-top:14px;margin-bottom:10px;font-size:15px;font-weight:800;">${title}</div>`;
-
-        items.forEach((item, idx) => {
-          const note = item.note ? item.note.replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
-          const best = item.bestTime ? item.bestTime.replace(/</g,"&lt;").replace(/>/g,"&gt;") : "";
-          html += `
-            <div class="card" style="margin:10px 0;">
-              <div style="display:flex;justify-content:space-between;gap:10px;">
-                <div style="min-width:52px;font-variant-numeric:tabular-nums;">${item.time || ""}</div>
-                <div style="flex:1;">
-                  <div style="font-size:16px;font-weight:800;">${item.title || ""}</div>
-                  <div style="font-size:12px;color:#333;">${item.subtitle || ""}</div>
-                </div>
-              </div>
-              <div style="margin-top:8px;font-size:12px;color:#111;">
-                <span style="display:inline-block;border:1px solid #ccc;border-radius:999px;padding:2px 8px;margin-right:6px;">${item.type || ""}</span>
-                <span style="margin-right:8px;">停留：${item.stay || ""}</span>
-                <span>費用：${item.cost || ""}</span>
-              </div>
-              <div class="detail open" style="max-height:none;opacity:1;margin-top:10px;">
-                <div class="detail-inner" style="border-top:1px solid #ddd;padding-top:8px;color:#111;">
-                  ${best ? `<div style="margin-top:4px;"><span style="font-weight:700;">最佳時段：</span>${best}</div>` : ""}
-                  ${note ? `<div style="margin-top:6px;white-space:pre-wrap;"><span style="font-weight:700;">備註：</span>${note}</div>` : ""}
-                </div>
-              </div>
-            </div>
-          `;
-
-          const seg = (state.transportByDay?.[d] || [])[idx];
-          if (idx < items.length - 1 && seg) {
-            const segments = Array.isArray(seg.segments)
-              ? seg.segments
-              : seg.main
-                ? [{
-                  icon: seg.main.icon || "",
-                  mode: seg.main.mode || "",
-                  from: "",
-                  to: "",
-                  duration: seg.main.duration || "",
-                  cost: seg.main.cost || ""
-                }]
-                : [];
-            const lines = segments.map((s) =>
-              `${s.icon || ""} ${s.mode || ""} ${s.duration || ""} ${s.cost || ""}`.replace(/\s+/g, " ").trim()
-            ).join("<br/>");
-            html += `
-              <div class="transport" style="margin:8px 6px;padding-left:10px;">
-                <div style="display:flex;gap:8px;align-items:center;color:#111;">
-                  <div style="font-variant-numeric:tabular-nums;">${lines}</div>
-                </div>
-              </div>
-            `;
-          }
-        });
-
-        const totalPerPerson = items.reduce((sum, i) => sum + (typeof i.cost === "string" && i.cost.includes("¥") ? (Number((i.cost.replace(/,/g,"").match(/¥\s*([\d.]+)/)||[])[1])||0) : 0), 0);
-        html += `<div class="day-total" style="margin:12px 4px 0;padding-top:10px;border-top:1px solid #ddd;text-align:right;color:#111;">當日費用小計 ¥${totalPerPerson.toLocaleString("en-US")}／人</div>`;
-      }
-
-      // Switch to a print-only view (do not mutate state / no saveState)
-      content.innerHTML = html;
-      window.scrollTo(0, 0);
-
-      const restore = () => {
-        content.innerHTML = prev.html;
-        state.activeDay = prev.activeDay;
-        state.activeView = prev.activeView;
-        state.reorderMode = prev.reorderMode;
-        render();
-      };
-      window.addEventListener("afterprint", restore, { once: true });
-      setTimeout(() => window.print(), 0);
     });
 
     render();
