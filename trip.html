@@ -3366,10 +3366,8 @@
         </div>
         <div class="detail ${detailOpen}">
           <div class="detail-inner">
-            詳細：可記錄集合時間、注意事項、雨天備案等。<br />
-            提示：點擊「停留時間 / 費用」可直接編輯。
-            <div class="recommend">⭐ 推薦：${getRecommendation(item)}</div>
-            <div class="note-display ${item.bestTime ? "" : "placeholder"}" data-field="bestTime" style="margin-top:6px;">${item.bestTime ? `⭐ ${item.bestTime}` : "點擊新增最佳時段或注意事項…"}</div>
+            ${!(item.bestTime || item.note) ? `<div style="color:#7a8298;font-size:0.78rem;line-height:1.6;margin-bottom:6px;">詳細：可記錄集合時間、注意事項、雨天備案等。<br/>提示：點擊「停留時間 / 費用」可直接編輯。<div style="margin-top:4px;">⭐ 推薦：${getRecommendation(item)}</div></div>` : ""}
+            <div class="note-display ${item.bestTime ? "" : "placeholder"}" data-field="bestTime" style="margin-bottom:4px;">${item.bestTime ? `⭐ ${item.bestTime}` : "點擊新增最佳時段或注意事項…"}</div>
             <div class="note-display ${item.note ? "" : "placeholder"}" data-note="1">${item.note ? item.note : "點擊新增備註…"}</div>
           </div>
         </div>
