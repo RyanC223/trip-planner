@@ -3368,8 +3368,8 @@
           <div class="detail-inner">
             詳細：可記錄集合時間、注意事項、雨天備案等。<br />
             提示：點擊「停留時間 / 費用」可直接編輯。
-            ${item.bestTime ? `<div class="besttime">⏰ 最佳時段：${item.bestTime}</div>` : ""}
             <div class="recommend">⭐ 推薦：${getRecommendation(item)}</div>
+            <div class="note-display ${item.bestTime ? "" : "placeholder"}" data-field="bestTime" style="margin-top:6px;">${item.bestTime ? `⭐ ${item.bestTime}` : "點擊新增最佳時段或注意事項…"}</div>
             <div class="note-display ${item.note ? "" : "placeholder"}" data-note="1">${item.note ? item.note : "點擊新增備註…"}</div>
           </div>
         </div>
@@ -3417,6 +3417,30 @@
       makeEditable(stayEl, day, item.id, "stay");
       makeEditable(costEl, day, item.id, "cost");
       makeNoteEditable(day, item.id, noteEl);
+
+      const bestTimeEl = card.querySelector('[data-field="bestTime"]');
+      if (bestTimeEl) {
+        bestTimeEl.addEventListener("click", () => {
+          const target = dayItems(day).find(i => i.id === item.id);
+          if (!target) return;
+          const textarea = document.createElement("textarea");
+          textarea.className = "note-editor";
+          textarea.placeholder = "最佳時段、注意事項、雨天備案…";
+          textarea.value = target.bestTime || "";
+          const save = () => {
+            target.bestTime = textarea.value.trim();
+            saveState();
+            render();
+          };
+          textarea.addEventListener("blur", save);
+          textarea.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); save(); }
+            if (e.key === "Escape") { render(); }
+          });
+          bestTimeEl.replaceWith(textarea);
+          textarea.focus();
+        });
+      }
 
       if (addrBtn) {
         addrBtn.addEventListener("click", async (e) => {
